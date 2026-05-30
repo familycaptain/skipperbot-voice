@@ -3,8 +3,9 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from typing import Any
+import logging
 
-from config import logger
+logger = logging.getLogger("skipperbot_voice")
 
 
 @dataclass

@@ -27,7 +27,7 @@ from basic_audio_test import (  # noqa: E402
     play_test_tone,
     resolve_audio_settings,
 )
-from config import logger  # noqa: E402
+import logging  # noqa: E402
 from realtime_voice_test import (  # noqa: E402
     DEFAULT_SPEAKER_ENROLL_MIN_MS,
     DEFAULT_SPEAKER_ISOLATION,
@@ -40,11 +40,13 @@ from realtime_voice_test import (  # noqa: E402
     RealtimeHomeVoiceClient,
     build_speaker_gate,
     initialize_async_loop,
-    initialize_skipper_tools,
     run_async,
     shutdown_async_loop,
 )
-from voice_session import end_session, mint_ephemeral_token  # noqa: E402
+import skipper_voice_client as skc  # noqa: E402
+
+# Thin client: brain/tools/DB live on the platform. No platform imports.
+logger = logging.getLogger("skipperbot_voice")
 
 
 DEFAULT_WAKE_KEYWORD_RAW = os.getenv("VOICE_WAKE_KEYWORD_PATH", "").strip()
@@ -566,9 +568,8 @@ def main() -> int:
             )
             return 0
 
-        print("\nInitializing Skipper tool routing...")
-        run_async(initialize_skipper_tools())
-
+        # Tools run on the platform; nothing to initialize locally. Each wake
+        # creates a server-side session whose config carries the tool list.
         while not stop_service.is_set():
             print("\nListening for wake word...")
             listener = create_wake_listener(
@@ -601,7 +602,7 @@ def main() -> int:
                     "friendly_name": args.friendly_name,
                     "audio_device_name": args.device_name,
                 }
-                session_config = mint_ephemeral_token(args.user_id, device_info)
+                session_config = skc.create_session(args.user_id, device_info)
                 if session_config and args.preroll_seconds > 0:
                     preroll_pcm = listener.snapshot_preroll_pcm()
                     preroll_sample_rate = listener.preroll_sample_rate
@@ -850,6 +851,9 @@ def run_realtime_conversation(
         audio_bridge=audio_bridge,
         stop_event=session_stop,
     )
+    client.sideband = skc.Sideband(
+        session_config["session_id"], client._dispatch_platform_event)
+    client.sideband.start()
     ws_thread = threading.Thread(target=client.run, daemon=True)
 
     try:
@@ -886,6 +890,8 @@ def run_realtime_conversation(
             time.sleep(0.1)
     finally:
         client.close()
+        if client.sideband is not None:
+            client.sideband.close()
         audio_bridge.stop()
         if not stop_service.is_set():
             play_end_chime(
@@ -895,7 +901,7 @@ def run_realtime_conversation(
                 output_sample_rate=output_sample_rate,
                 output_channels=output_channels,
             )
-        end_session(session_config["session_id"])
+        skc.end_session(session_config["session_id"])
 
     print("Conversation ended; returning to wake-word mode.")
 

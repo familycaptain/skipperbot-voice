@@ -30,11 +30,12 @@ from basic_audio_test import (  # noqa: E402
     resolve_audio_settings,
     convert_audio,
 )
-from config import logger  # noqa: E402
+import logging  # noqa: E402
 from speaker_isolation import SpeakerIsolationConfig, SpeakerIsolationGate  # noqa: E402
-from voice_session import end_session, mint_ephemeral_token  # noqa: E402
-from voice_tool_runtime import handle_voice_tool_call  # noqa: E402
-from voice_chatlog import drain_voice_persistence, forget_voice_session, record_voice_transcript  # noqa: E402
+import skipper_voice_client as skc  # noqa: E402
+
+# Thin client: the brain/tools/DB live on the platform. No platform imports.
+logger = logging.getLogger("skipperbot_voice")
 
 
 REALTIME_WS_URL = "wss://api.openai.com/v1/realtime"
@@ -258,6 +259,9 @@ class RealtimeHomeVoiceClient:
         self.session_config = session_config
         self.audio_bridge = audio_bridge
         self.stop_event = stop_event
+        # Sideband WS to the platform (relays tool calls + transcripts).
+        # Set by the run flow after the session is created.
+        self.sideband = None
         self.ws = None
         self.sender_thread: threading.Thread | None = None
         self.pending_tool_names: dict[str, str] = {}
@@ -383,25 +387,10 @@ class RealtimeHomeVoiceClient:
             logger.debug("HOME_VOICE: realtime event: %s", event_type)
 
     def _record_transcript(self, role: str, transcript: str) -> None:
-        future = asyncio.run_coroutine_threadsafe(
-            record_voice_transcript(
-                self.session_config["session_id"],
-                role,
-                transcript,
-            ),
-            ASYNC_LOOP,
-        )
-
-        def _log_result(done) -> None:
-            try:
-                turn_id = done.result()
-            except Exception as exc:
-                logger.error("HOME_VOICE: failed recording voice transcript: %s", exc)
-                return
-            if turn_id:
-                logger.debug("HOME_VOICE: scheduled voice chat turn %s", turn_id)
-
-        future.add_done_callback(_log_result)
+        # The platform owns the DB; relay the transcript over the sideband WS
+        # and let it persist (voice_chatlog) server-side.
+        if self.sideband is not None:
+            self.sideband.send_transcript(role, transcript)
 
     def _on_error(self, ws, error) -> None:
         if not self.stop_event.is_set():
@@ -469,62 +458,52 @@ class RealtimeHomeVoiceClient:
 
         print(f"Tool call: {tool_name}({arguments})")
         self.pending_tool_names[call_id] = tool_name
-        future = asyncio.run_coroutine_threadsafe(
-            handle_voice_tool_call(
-                session_id=self.session_config["session_id"],
-                call_id=call_id,
-                tool_name=tool_name,
-                arguments=arguments,
-            ),
-            ASYNC_LOOP,
-        )
-        future.add_done_callback(lambda done: self._send_tool_events(call_id, done))
+        # The platform executes the tool (MCP + DB) and streams the result back
+        # over the sideband WS; _dispatch_platform_event handles the reply.
+        if self.sideband is not None:
+            self.sideband.send_tool_call(call_id, tool_name, arguments)
+        else:
+            logger.error("HOME_VOICE: no sideband connection; dropping tool call %s", tool_name)
 
-    def _send_tool_events(self, call_id: str, done) -> None:
-        try:
-            events = done.result()
-        except Exception as exc:
-            events = [{
-                "type": "tool_result",
-                "call_id": call_id,
-                "output": f"Error executing voice tool: {exc}",
-            }]
+    def _dispatch_platform_event(self, event: dict) -> None:
+        """Handle one event the platform streams back over the sideband WS:
+        tool_result / session_update / confirmation_required / end_session."""
+        event_type = event.get("type")
+        if event_type == "session_update":
+            app = event.get("app") or "default"
+            print(f"Switching voice app: {app}")
+            self._send_session_update(
+                event.get("instructions", ""),
+                event.get("tools", []),
+            )
+        elif event_type == "tool_result":
+            output       = event.get("output", "")
+            event_call   = event.get("call_id", "")
+            tool_name    = self.pending_tool_names.pop(event_call, "")
+            # Echo the tool output to the console so we can see what the
+            # model is actually getting back (recall hits, errors, etc).
+            # Truncate long outputs so the console stays readable; the
+            # full string still goes back to OpenAI below.
+            preview = (output or "(empty)").rstrip()
+            if len(preview) > 800:
+                preview = preview[:800] + f"... ({len(output) - 800} more chars)"
+            label = tool_name or event_call or "tool"
+            print(f"Tool result [{label}]:\n  " + preview.replace("\n", "\n  "))
 
-        for event in events:
-            event_type = event.get("type")
-            if event_type == "session_update":
-                app = event.get("app") or "default"
-                print(f"Switching voice app: {app}")
-                self._send_session_update(
-                    event.get("instructions", ""),
-                    event.get("tools", []),
-                )
-            elif event_type == "tool_result":
-                output       = event.get("output", "")
-                event_call   = event.get("call_id", call_id)
-                tool_name    = self.pending_tool_names.pop(event_call, "")
-                # Echo the tool output to the console so we can see what the
-                # model is actually getting back (recall hits, errors, etc).
-                # Truncate long outputs so the console stays readable; the
-                # full string still goes back to OpenAI below.
-                preview = (output or "(empty)").rstrip()
-                if len(preview) > 800:
-                    preview = preview[:800] + f"... ({len(output) - 800} more chars)"
-                label = tool_name or event_call or "tool"
-                print(f"Tool result [{label}]:\n  " + preview.replace("\n", "\n  "))
-
-                self.send_event({
-                    "type": "conversation.item.create",
-                    "item": {
-                        "type": "function_call_output",
-                        "call_id": event_call,
-                        "output": output,
-                    },
-                })
-                self.send_event({"type": "response.create"})
-            elif event_type == "end_session":
-                print("Ending session.")
-                self.stop_event.set()
+            self.send_event({
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "function_call_output",
+                    "call_id": event_call,
+                    "output": output,
+                },
+            })
+            self.send_event({"type": "response.create"})
+        elif event_type == "confirmation_required":
+            logger.info("HOME_VOICE: confirmation_required for %s", event.get("action"))
+        elif event_type == "end_session":
+            print("Ending session.")
+            self.stop_event.set()
 
 
 def load_websocket_dep():
@@ -591,9 +570,6 @@ def main() -> int:
     args = build_parser().parse_args()
     np, sd = load_audio_deps()
 
-    initialize_async_loop()
-    run_async(initialize_skipper_tools())
-
     device_info = {
         "platform": "home_voice",
         "device_type": "home_voice",
@@ -602,9 +578,9 @@ def main() -> int:
         "friendly_name": args.friendly_name,
         "audio_device_name": args.device_name,
     }
-    session_config = mint_ephemeral_token(args.user_id, device_info)
+    session_config = skc.create_session(args.user_id, device_info)
     if not session_config:
-        raise RuntimeError("Could not create shared voice session config.")
+        raise RuntimeError("Could not create a voice session via the platform API.")
 
     print("Home realtime voice session:")
     print(f"  user_id:         {args.user_id}")
@@ -665,6 +641,9 @@ def main() -> int:
         audio_bridge=audio_bridge,
         stop_event=stop_event,
     )
+    client.sideband = skc.Sideband(
+        session_config["session_id"], client._dispatch_platform_event)
+    client.sideband.start()
 
     def _stop(signum=None, frame=None) -> None:
         stop_event.set()
@@ -687,11 +666,10 @@ def main() -> int:
             time.sleep(0.1)
     finally:
         client.close()
+        if client.sideband is not None:
+            client.sideband.close()
         audio_bridge.stop()
-        run_async(drain_voice_persistence(timeout=8.0))
-        forget_voice_session(session_config["session_id"])
-        end_session(session_config["session_id"])
-        shutdown_async_loop()
+        skc.end_session(session_config["session_id"])
 
     print("Realtime home voice test stopped.")
     return 0
@@ -717,15 +695,6 @@ def shutdown_async_loop() -> None:
 
 def run_async(coro):
     return asyncio.run_coroutine_threadsafe(coro, ASYNC_LOOP).result()
-
-
-async def initialize_skipper_tools() -> None:
-    import mcp_client
-    import tool_dispatch
-
-    tools = await mcp_client.connect_to_mcp()
-    await asyncio.to_thread(tool_dispatch.init)
-    tool_dispatch.verify_against_mcp([tool.name for tool in tools])
 
 
 if __name__ == "__main__":

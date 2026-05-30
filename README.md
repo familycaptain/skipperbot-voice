@@ -2,20 +2,25 @@
 
 Skipperbot **companion service** — the wake-word voice assistant ("Hey Skipper").
 Runs as its own process on local audio hardware (mic + speaker, e.g. an EMEET
-speakerphone or a Raspberry Pi satellite) and integrates with the platform by
-sharing its Postgres database / calling its REST API. The platform does not
-manage this service — if it isn't running, the platform is unaffected.
+speakerphone or a Raspberry Pi satellite). The platform does not manage this
+service — if it isn't running, the platform is unaffected.
 
-> **Status:** prerelease extraction from the Skipperbot monolith's `home_voice/`.
-> This repo exists so platform-wide refactors (timezone → `platform.time`,
-> reading config from app/platform settings instead of `.env`, `public` →
-> app-schema table moves, the voice settings called out in OPEN_SOURCE Phase 4)
-> land here alongside the platform. Remote upstream not wired yet. Copy
-> `.env.example` → `.env` to configure.
+**Thin client.** This service does only audio capture/playback, wake-word
+detection, and OpenAI Realtime streaming. It talks to the platform over HTTP/WS
+(`POST /api/voice/session` to mint an ephemeral Realtime token + session config,
+`WS /ws/voice/{id}` to relay tool calls and transcripts, `POST /api/voice/end`).
+The brain, tools (MCP), and database all live on the platform — so a satellite
+Pi needs **no database connection, no OpenAI key, and no platform code**, only
+`SKIPPER_API_BASE` pointing at the platform. This is what makes it safe to run
+on a separate Pi from the one hosting the Skipper docker stack + Postgres.
+
+> **Status:** extracted from the monolith's `home_voice/` and refactored into a
+> thin client (`skipper_voice_client.py`). Built but not yet hardware-tested
+> end-to-end. Copy `.env.example` → `.env` to configure.
 >
-> The setup notes below were written when these files lived in the monolith's
-> `home_voice/` subdirectory — now that they're at the repo root, drop the
-> `home_voice/` prefix from each command (e.g. `python wake_voice_service.py`).
+> Some Phase-1 setup notes below were written when these files lived in the
+> monolith's `home_voice/` subdirectory — drop the `home_voice/` prefix from
+> those commands (e.g. `python wake_voice_service.py`).
 
 ---
 
