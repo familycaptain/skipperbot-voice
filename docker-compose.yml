@@ -1,0 +1,36 @@
+# =============================================================================
+# skipperbot-voice — docker compose (standalone companion service)
+# =============================================================================
+# Deploy on the audio device (desktop with a mic/speaker, or a Raspberry Pi
+# satellite). This is NOT part of the platform's compose — it runs on its own
+# and reaches the platform over the network (SKIPPER_API_BASE / SKIPPERBOT_DB_DSN
+# in .env).
+#
+# Usage:
+#   1. cp .env.example .env   &&  edit it (API base, OpenAI voice key, devices)
+#   2. docker compose up --build
+#
+# Audio: ALSA device passthrough (/dev/snd) is the default and works on Linux /
+# Raspberry Pi. The container user needs the host's "audio" group (group_add).
+# For a PulseAudio host instead, see the commented block below.
+
+services:
+  voice:
+    build: .
+    # Host networking: simplest path to reach the platform API/DB and keeps
+    # audio/mDNS straightforward. On a remote satellite, set SKIPPER_API_BASE
+    # to the platform's address in .env.
+    network_mode: host
+    devices:
+      - "/dev/snd:/dev/snd"     # ALSA mic + speaker
+    group_add:
+      - audio
+    env_file:
+      - .env
+    restart: unless-stopped
+    # ---- PulseAudio alternative (comment out devices/group_add above) -------
+    # environment:
+    #   - PULSE_SERVER=unix:/run/user/1000/pulse/native
+    # volumes:
+    #   - /run/user/1000/pulse/native:/run/user/1000/pulse/native
+    #   - ${HOME}/.config/pulse/cookie:/root/.config/pulse/cookie:ro

@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.env.*
+*.wav
+*.mp3
+*.flac
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+models/
+*.tflite
+.vscode/
+.idea/
+.DS_Store

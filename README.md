@@ -19,6 +19,34 @@ manage this service — if it isn't running, the platform is unaffected.
 
 ---
 
+## Run with Docker (recommended)
+
+```bash
+cp .env.example .env       # set SKIPPER_API_BASE, OPENAI_VOICE_API_KEY, devices
+docker compose up --build
+```
+
+The image pins **Python 3.12**, installs the deps in `requirements.txt`, then
+installs **openWakeWord ≥ 0.6.0 with `--no-deps`** (its full dependency set
+pulls in tflite-runtime and conflicting pins; we run the ONNX framework
+instead), and finally **pre-downloads the pretrained models** at build time
+(`from openwakeword.utils import download_models; download_models()`) so the
+container starts offline with no first-run fetch.
+
+Audio uses ALSA device passthrough (`/dev/snd`) — works on Linux / Raspberry
+Pi; the container joins the host `audio` group. For a PulseAudio host, see the
+commented block in `docker-compose.yml`. `network_mode: host` lets the service
+reach the platform API/DB; point `SKIPPER_API_BASE` at the platform if it runs
+on another host.
+
+To smoke-test with a bundled label before training "Hey Skipper":
+
+```bash
+docker compose run --rm voice python wake_voice_service.py \
+  --wake-backend openwakeword --openwakeword-label hey_jarvis \
+  --openwakeword-inference-framework onnx --self-test-wake
+```
+
 ## Hardware / setup notes (Phase 1)
 
 Early hardware tests for the EMEET Conference Speakerphone M0 Plus.

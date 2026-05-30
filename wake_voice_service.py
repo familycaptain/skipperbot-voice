@@ -142,7 +142,8 @@ class OpenWakeWordWakeListener:
             from openwakeword import utils as oww_utils
         except ModuleNotFoundError as exc:
             raise RuntimeError(
-                "openwakeword is not installed. Run: pip install -r home_voice/requirements.txt"
+                "openwakeword is not installed. Run: pip install -r requirements.txt "
+                "&& pip install --no-deps 'openwakeword>=0.6.0'"
             ) from exc
 
         if self.download_models:
