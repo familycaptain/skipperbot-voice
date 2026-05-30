@@ -1,0 +1,189 @@
+# skipperbot-voice
+
+Skipperbot **companion service** — the wake-word voice assistant ("Hey Skipper").
+Runs as its own process on local audio hardware (mic + speaker, e.g. an EMEET
+speakerphone or a Raspberry Pi satellite) and integrates with the platform by
+sharing its Postgres database / calling its REST API. The platform does not
+manage this service — if it isn't running, the platform is unaffected.
+
+> **Status:** prerelease extraction from the Skipperbot monolith's `home_voice/`.
+> This repo exists so platform-wide refactors (timezone → `platform.time`,
+> reading config from app/platform settings instead of `.env`, `public` →
+> app-schema table moves, the voice settings called out in OPEN_SOURCE Phase 4)
+> land here alongside the platform. Remote upstream not wired yet. Copy
+> `.env.example` → `.env` to configure.
+>
+> The setup notes below were written when these files lived in the monolith's
+> `home_voice/` subdirectory — now that they're at the repo root, drop the
+> `home_voice/` prefix from each command (e.g. `python wake_voice_service.py`).
+
+---
+
+## Hardware / setup notes (Phase 1)
+
+Early hardware tests for the EMEET Conference Speakerphone M0 Plus.
+
+Install the test dependencies:
+
+```powershell
+pip install -r home_voice/requirements.txt
+pip install --no-deps openwakeword>=0.6.0
+```
+
+### OpenWakeWord model download (required, one-time)
+
+The OpenWakeWord pretrained / preprocessing models are **not** bundled with the
+pip package and **must** be downloaded before `wake_voice_service.py` can
+start. Without them the service will fail to load `melspectrogram`,
+`embedding_model`, and `silero_vad`.
+
+From a venv where `openwakeword` and the deps in `requirements.txt` are
+installed, run:
+
+```bash
+python -c "from openwakeword.utils import download_models; download_models()"
+```
+
+This downloads `melspectrogram`, `embedding_model`, `silero_vad`, and the
+bundled wake-word labels (`alexa`, `hey_jarvis`, `hey_mycroft`, `hey_rhasspy`,
+`timer`, `weather`) into the `openwakeword` package directory in both
+`.tflite` and `.onnx` formats. You only need to do this once per venv.
+
+The download step requires `onnxruntime`, `scipy`, and `scikit-learn` — these
+are listed in `requirements.txt`, so `pip install -r home_voice/requirements.txt`
+followed by the `--no-deps openwakeword` install above is enough.
+
+On Linux Mint, the EMEET speakerphone often does not expose a usable PortAudio
+*output* device even when its microphone enumerates fine. The output now
+defaults to the system default (`"default"`); set `VOICE_DEVICE_OUTPUT_NAME` or
+pass `--output-name=EMEET` if you want to force the EMEET speaker back on
+(typically on Windows).
+
+List all audio devices:
+
+```powershell
+python home_voice/basic_audio_test.py --mode list
+```
+
+Run the basic EMEET test:
+
+```powershell
+python home_voice/basic_audio_test.py
+```
+
+That default test will:
+
+- list audio devices
+- find input and output devices containing `EMEET`
+- play a short tone through the EMEET speaker
+- record a short sample from the EMEET microphone
+- play that sample back through the EMEET speaker
+- save the sample to `home_voice/last_recording.wav`
+
+Optional guarded loopback test:
+
+```powershell
+python home_voice/basic_audio_test.py --mode list --loopback-seconds 10
+```
+
+Start with low speaker volume before loopback testing to avoid feedback.
+
+Build the shared home voice config and record a one-shot utterance:
+
+```powershell
+python home_voice/one_shot_voice_test.py
+```
+
+That script uses the same backend voice prompt/tool builder as the Android
+voice path, with `platform=home_voice` and room/device context added.
+
+Run the one-shot Skipper response test:
+
+```powershell
+python home_voice/one_shot_response_test.py
+```
+
+That records one utterance, transcribes it, sends the text through Skipper's
+normal chat/tool brain with home voice context, synthesizes Skipper's response,
+and plays the response through the EMEET speaker.
+
+This chained STT -> text -> TTS test is only a Phase 1 stepping stone. The final
+home voice path should use the same two-way OpenAI Realtime streaming pattern as
+the Android app, with the backend providing compact voice instructions and
+switchable app/tool guides.
+
+Run the realtime EMEET prototype:
+
+```powershell
+python home_voice/realtime_voice_test.py
+```
+
+This opens a realtime session, streams EMEET mic PCM audio to OpenAI, plays
+assistant audio deltas through the EMEET speaker, and routes voice tool calls
+through Skipper's shared voice runtime. Press `Ctrl+C` to stop.
+
+Run the always-on wake-word service with OpenWakeWord:
+
+```powershell
+python home_voice/wake_voice_service.py --wake-backend openwakeword
+```
+
+If `VOICE_OPENWAKEWORD_MODEL_PATHS` is not set, the service auto-selects a
+stable `hey-skipper.onnx` / `hey_skipper.onnx` file or the newest timestamped
+`Hey_Skipper*.onnx` export from `home_voice\wake_words`.
+
+OpenWakeWord avoids Picovoice per-device activation limits and is the preferred
+wake backend for the EMEET / future Raspberry Pi satellite. For quick testing
+before training "Hey Skipper", download OpenWakeWord's pretrained models,
+initialize the EMEET wake listener, and try a bundled label such as
+`hey_jarvis`:
+
+```powershell
+python home_voice/wake_voice_service.py --wake-backend openwakeword --openwakeword-download-models --openwakeword-label hey_jarvis --openwakeword-inference-framework onnx --self-test-wake
+```
+
+Then run the full wake -> realtime conversation loop with the bundled model:
+
+```powershell
+python home_voice/wake_voice_service.py --wake-backend openwakeword --openwakeword-label hey_jarvis --openwakeword-inference-framework onnx
+```
+
+False-wake safety timeouts are enabled by default:
+
+- `VOICE_INITIAL_SPEECH_TIMEOUT_SECONDS=20` returns to wake mode if no user transcript arrives after a wake.
+- `VOICE_IDLE_TIMEOUT_SECONDS=45` returns to wake mode after a real conversation goes quiet.
+- `VOICE_MAX_SESSION_SECONDS=300` is a hard cap so a session cannot stream all day.
+
+Set any value to `0` to disable that specific timeout, or pass the matching
+CLI option, e.g.:
+
+```powershell
+python home_voice/wake_voice_service.py --initial-speech-timeout-seconds 15 --idle-timeout-seconds 60 --max-session-seconds 300
+```
+
+Experimental session speaker lock:
+
+```powershell
+pip install -r home_voice/requirements-speaker-isolation.txt
+python home_voice/wake_voice_service.py --wake-backend openwakeword --speaker-isolation optional
+```
+
+With speaker isolation enabled, the first usable speech segment after the wake
+word enrolls the active session speaker. Later speech segments are buffered
+locally and forwarded to Realtime only if their speaker embedding is similar
+enough to that first speaker. This is intended to ignore loud background
+speakers during a conversation. It is experimental and tunable:
+
+```powershell
+python home_voice/wake_voice_service.py --speaker-isolation optional --speaker-similarity 0.68 --speaker-rms 0.015
+```
+
+Use `--speaker-isolation required` only when you want startup to fail if the
+speaker-lock dependency is unavailable. The default is `off`.
+
+Porcupine is still supported for comparison or for a future multi-device
+Picovoice plan:
+
+```powershell
+python home_voice/wake_voice_service.py --wake-backend porcupine --keyword-path C:\path\to\hey-skipper_windows.ppn
+```

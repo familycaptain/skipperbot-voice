@@ -1,0 +1,49 @@
+# =============================================================================
+# skipperbot-voice — .gitignore (companion service)
+# =============================================================================
+
+# ----- secrets and credentials (NEVER commit) -----
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+**/service-account*.json
+**/credentials*.json
+
+# ----- audio captures / recordings -----
+*.wav
+*.mp3
+*.flac
+
+# ----- downloaded openWakeWord models (fetched at setup, not source) -----
+# (the custom Hey_Skipper wake word .onnx IS tracked; the pretrained
+#  melspectrogram/embedding/silero models are downloaded on first run)
+models/
+*.tflite
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+ENV/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ----- IDE / editors / OS junk -----
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+*.bak
+*.orig

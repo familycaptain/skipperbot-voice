@@ -1,0 +1,12 @@
+numpy>=1.26.0
+sounddevice>=0.4.6
+websocket-client>=1.8.0
+pvporcupine>=3.0.0
+# Minimum runtime deps for openwakeword with the ONNX inference framework.
+# tflite-runtime is intentionally omitted; pass --openwakeword-inference-framework onnx.
+onnxruntime>=1.17.0
+scipy>=1.3,<2
+scikit-learn>=1,<2
+# openwakeword pulls in heavy/conflicting deps (e.g. tflite-runtime).
+# Install it without its dependencies:
+#   pip install --no-deps openwakeword>=0.6.0
