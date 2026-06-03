@@ -31,12 +31,19 @@ import json
 import logging
 import os
 import threading
+import urllib.parse
 import urllib.request
 
 logger = logging.getLogger("skipperbot_voice")
 
 DEFAULT_API_BASE = os.getenv("SKIPPER_API_BASE", "http://localhost:8000").rstrip("/")
 HTTP_TIMEOUT = float(os.getenv("SKIPPER_API_TIMEOUT", "15"))
+
+# Service token for authenticating to the platform once it enforces auth. Issue
+# it on the platform host with `python scripts/service_token.py create voice`
+# and put it here as SKIPPERBOT_TOKEN. Sent as `Authorization: Bearer <token>`
+# on HTTP and `?token=<token>` on the sideband websocket.
+SKIPPER_TOKEN = os.getenv("SKIPPERBOT_TOKEN", "").strip()
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +56,8 @@ def _request(method: str, path: str, payload: dict | None, *, api_base: str) -> 
     headers = {"Accept": "application/json"}
     if data is not None:
         headers["Content-Type"] = "application/json"
+    if SKIPPER_TOKEN:
+        headers["Authorization"] = f"Bearer {SKIPPER_TOKEN}"
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
         raw = resp.read().decode("utf-8")
@@ -93,7 +102,10 @@ def end_session(session_id: str, *, api_base: str = DEFAULT_API_BASE) -> None:
 
 def _ws_url(api_base: str, session_id: str) -> str:
     base = api_base.replace("https://", "wss://").replace("http://", "ws://")
-    return f"{base}/ws/voice/{session_id}"
+    url = f"{base}/ws/voice/{session_id}"
+    if SKIPPER_TOKEN:
+        url += f"?token={urllib.parse.quote(SKIPPER_TOKEN)}"
+    return url
 
 
 class Sideband:
