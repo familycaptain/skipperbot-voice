@@ -27,9 +27,23 @@ on a separate Pi from the one hosting the Skipper docker stack + Postgres.
 ## Run with Docker (recommended)
 
 ```bash
-cp .env.example .env       # set SKIPPER_API_BASE (+ SKIPPERBOT_TOKEN, devices). No OpenAI key — the platform mints the realtime token.
+# 1. Config
+cp .env.example .env       # set SKIPPER_API_BASE + SKIPPERBOT_TOKEN (+ devices). No OpenAI key — the platform mints the realtime token.
+
+# 2. Mint a service token ON THE PLATFORM HOST (the platform enforces auth, so
+#    /api/voice/* returns 401 without it). Native:
+#      python scripts/service_token.py create voice
+#    Docker platform:
+#      docker compose exec agent python scripts/service_token.py create voice
+#    Copy the printed st_... value into .env as SKIPPERBOT_TOKEN.
+
+# 3. Start
 docker compose up --build
 ```
+
+> **Auth is required.** If the wake word is detected and a tone plays but the log
+> shows `POST /api/voice/session -> HTTP 401`, the `SKIPPERBOT_TOKEN` is missing
+> or wrong — mint one as in step 2 and set it in `.env`.
 
 The image pins **Python 3.12**, installs the deps in `requirements.txt`, then
 installs **openWakeWord ≥ 0.6.0 with `--no-deps`** (its full dependency set
