@@ -27,7 +27,7 @@ on a separate Pi from the one hosting the Skipper docker stack + Postgres.
 ## Run with Docker (recommended)
 
 ```bash
-cp .env.example .env       # set SKIPPER_API_BASE, OPENAI_VOICE_API_KEY, devices
+cp .env.example .env       # set SKIPPER_API_BASE (+ SKIPPERBOT_TOKEN, devices). No OpenAI key — the platform mints the realtime token.
 docker compose up --build
 ```
 
