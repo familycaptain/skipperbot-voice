@@ -48,9 +48,12 @@ DEFAULT_SPEAKER_RMS = float(os.getenv("VOICE_SPEAKER_RMS", "0.015"))
 DEFAULT_SPEAKER_SILENCE_MS = int(os.getenv("VOICE_SPEAKER_SILENCE_MS", "700"))
 DEFAULT_SPEAKER_ENROLL_MIN_MS = int(os.getenv("VOICE_SPEAKER_ENROLL_MIN_MS", "900"))
 DEFAULT_SPEAKER_VERIFY_MIN_MS = int(os.getenv("VOICE_SPEAKER_VERIFY_MIN_MS", "450"))
+# Default OFF: the reference hardware (EMEET conference speakerphone) cancels its
+# own playback in hardware, so full-duplex barge-in works without muting the mic.
+# Set VOICE_SUPPRESS_MIC_DURING_PLAYBACK=true for setups with no hardware AEC.
 DEFAULT_SUPPRESS_MIC_DURING_PLAYBACK = os.getenv(
     "VOICE_SUPPRESS_MIC_DURING_PLAYBACK",
-    "true",
+    "false",
 ).strip().lower() not in {"0", "false", "off", "no"}
 DEFAULT_PLAYBACK_TAIL_MS = int(os.getenv("VOICE_PLAYBACK_TAIL_MS", "250"))
 DEFAULT_PLAYBACK_BARGE_IN_GRACE_MS = int(os.getenv("VOICE_PLAYBACK_BARGE_IN_GRACE_MS", "700"))
