@@ -451,6 +451,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--frame-ms", type=int, default=DEFAULT_FRAME_MS)
     parser.add_argument("--cooldown-seconds", type=float, default=DEFAULT_COOLDOWN_SECONDS)
     parser.add_argument(
+        "--mode",
+        choices=("relay", "direct"),
+        default=os.getenv("VOICE_MODE", "relay"),
+        help=(
+            "relay (default): stream audio to the platform, which runs the OpenAI "
+            "Realtime session, the tools, and speaker identification. "
+            "direct: legacy — the satellite connects to OpenAI itself."
+        ),
+    )
+    parser.add_argument(
         "--speaker-isolation",
         choices=("off", "optional", "required"),
         default=DEFAULT_SPEAKER_ISOLATION,
@@ -616,7 +626,11 @@ def main() -> int:
                     time.sleep(args.cooldown_seconds)
                 continue
 
-            run_realtime_conversation(
+            conversation = (
+                run_relay_conversation if args.mode == "relay"
+                else run_realtime_conversation
+            )
+            conversation(
                 np,
                 sd,
                 args=args,
@@ -897,6 +911,101 @@ def run_realtime_conversation(
             play_end_chime(
                 np,
                 sd,
+                output_device=output_device,
+                output_sample_rate=output_sample_rate,
+                output_channels=output_channels,
+            )
+        skc.end_session(session_config["session_id"])
+
+    print("Conversation ended; returning to wake-word mode.")
+
+
+def run_relay_conversation(
+    np: Any,
+    sd: Any,
+    *,
+    args: argparse.Namespace,
+    input_device: int | None,
+    output_device: int | None,
+    stop_service: threading.Event,
+    session_config: dict,
+    preroll_pcm: Any | None = None,
+    preroll_sample_rate: int = 0,
+) -> None:
+    """Relay mode: stream 2-way audio to the platform's /ws/voice/audio relay.
+
+    The platform runs the OpenAI Realtime session, the tools, and speaker
+    identification. The satellite is just wake word + AEC + audio I/O — so no
+    local speaker gate and no sideband here.
+    """
+    from host_relay_client import RelayClient
+
+    input_sample_rate, input_channels = resolve_audio_settings(
+        sd, device_index=input_device, kind="input",
+        preferred_rate=16000, preferred_channels=1, use_device_default_rate=False,
+    )
+    output_sample_rate, output_channels = resolve_audio_settings(
+        sd, device_index=output_device, kind="output",
+        preferred_rate=REALTIME_AUDIO_RATE, preferred_channels=1, use_device_default_rate=False,
+    )
+
+    print("Starting relay conversation (OpenAI session + tools + speaker ID run on the host).")
+    print(f"  active_app: {session_config.get('active_app')}")
+    print(f"  host:       {skc.DEFAULT_API_BASE}")
+    print("Say goodbye, stop, or I'm done to return to wake-word mode.")
+
+    session_stop = threading.Event()
+    audio_bridge = RealtimeAudioBridge(
+        np, sd,
+        input_device=input_device,
+        output_device=output_device,
+        input_sample_rate=input_sample_rate,
+        input_channels=input_channels,
+        output_sample_rate=output_sample_rate,
+        output_channels=output_channels,
+        frame_ms=args.frame_ms,
+        speaker_gate=None,  # speaker ID is the host's job in relay mode
+    )
+    client = RelayClient(
+        session_config=session_config,
+        audio_bridge=audio_bridge,
+        stop_event=session_stop,
+        api_base=skc.DEFAULT_API_BASE,
+    )
+    ws_thread = threading.Thread(target=client.run, daemon=True)
+
+    try:
+        if preroll_pcm is not None and preroll_sample_rate > 0:
+            injected_samples = audio_bridge.inject_preroll_pcm(
+                preroll_pcm, source_sample_rate=preroll_sample_rate,
+            )
+            if injected_samples > 0:
+                print(f"  injected pre-roll: {injected_samples / REALTIME_AUDIO_RATE:.2f}s")
+        audio_bridge.start()
+        ws_thread.start()
+        started = time.monotonic()
+        while not stop_service.is_set() and not session_stop.is_set():
+            if (args.initial_speech_timeout_seconds > 0
+                    and not client.first_user_transcript_at
+                    and client.waiting_for_first_user_transcript_seconds()
+                    >= args.initial_speech_timeout_seconds):
+                print("No speech after wake; returning to wake-word mode.")
+                break
+            if (args.idle_timeout_seconds > 0
+                    and client.first_user_transcript_at
+                    and client.idle_seconds() >= args.idle_timeout_seconds):
+                print("Conversation idle timeout reached; returning to wake-word mode.")
+                break
+            if args.max_session_seconds > 0 and time.monotonic() - started >= args.max_session_seconds:
+                print("Max session duration reached; ending conversation.")
+                break
+            time.sleep(0.1)
+    finally:
+        client.close()
+        audio_bridge.stop()
+        if not stop_service.is_set():
+            play_end_chime(
+                np, sd,
                 output_device=output_device,
                 output_sample_rate=output_sample_rate,
                 output_channels=output_channels,
