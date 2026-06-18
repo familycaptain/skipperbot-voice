@@ -42,8 +42,16 @@ HTTP_TIMEOUT = float(os.getenv("SKIPPER_API_TIMEOUT", "15"))
 # Service token for authenticating to the platform once it enforces auth. Issue
 # it on the platform host with `python scripts/service_token.py create voice`
 # and put it here as SKIPPERBOT_TOKEN. Sent as `Authorization: Bearer <token>`
-# on HTTP and `?token=<token>` on the sideband websocket.
+# on BOTH HTTP and the websocket handshake — the platform stopped reading a
+# `?token=` URL param (issue #7, to keep tokens out of access logs), so a WS that
+# only carries the token in the URL is rejected (auth-close, looks like a 403).
 SKIPPER_TOKEN = os.getenv("SKIPPERBOT_TOKEN", "").strip()
+
+
+def ws_auth_headers() -> list[str]:
+    """Headers to send on a platform WebSocket handshake. The token MUST ride here
+    (Authorization), not in the URL — see the note above."""
+    return [f"Authorization: Bearer {SKIPPER_TOKEN}"] if SKIPPER_TOKEN else []
 
 
 # ---------------------------------------------------------------------------
@@ -102,10 +110,7 @@ def end_session(session_id: str, *, api_base: str = DEFAULT_API_BASE) -> None:
 
 def _ws_url(api_base: str, session_id: str) -> str:
     base = api_base.replace("https://", "wss://").replace("http://", "ws://")
-    url = f"{base}/ws/voice/{session_id}"
-    if SKIPPER_TOKEN:
-        url += f"?token={urllib.parse.quote(SKIPPER_TOKEN)}"
-    return url
+    return f"{base}/ws/voice/{session_id}"   # token rides the Authorization header (ws_auth_headers), not the URL
 
 
 class Sideband:
@@ -136,6 +141,7 @@ class Sideband:
             ) from exc
         self._ws = websocket.WebSocketApp(
             _ws_url(self.api_base, self.session_id),
+            header=ws_auth_headers(),
             on_message=self._on_message,
             on_error=self._on_error,
             on_close=self._on_close,

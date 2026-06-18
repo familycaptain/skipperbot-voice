@@ -54,15 +54,13 @@ class RelayClient:
     # --- websocket lifecycle ---
     def _url(self) -> str:
         base = self.api_base.replace("https://", "wss://").replace("http://", "ws://")
-        url = f"{base}/ws/voice/audio/{urllib.parse.quote(self.session_id)}"
-        if skc.SKIPPER_TOKEN:
-            url += f"?token={urllib.parse.quote(skc.SKIPPER_TOKEN)}"
-        return url
+        return f"{base}/ws/voice/audio/{urllib.parse.quote(self.session_id)}"  # token rides the Authorization header, not the URL
 
     def run(self) -> None:
         websocket = load_websocket_dep()
         self.ws = websocket.WebSocketApp(
             self._url(),
+            header=skc.ws_auth_headers(),
             on_open=self._on_open,
             on_message=self._on_message,
             on_error=self._on_error,
