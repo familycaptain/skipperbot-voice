@@ -116,6 +116,15 @@ class RelayClient:
             elif status == "speech_stopped":
                 print("Thinking...")
             self.mark_activity()
+        elif etype == "tool_call":
+            name = event.get("name", "?")
+            args = event.get("args")
+            try:
+                args_str = json.dumps(args, default=str) if args else "{}"
+            except Exception:
+                args_str = str(args)
+            print(f"  -> tool: {name} {args_str}")
+            self.mark_activity()
         elif etype == "session_ended":
             print("Session ended by host.")
             self.stop_event.set()
