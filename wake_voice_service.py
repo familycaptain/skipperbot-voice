@@ -66,7 +66,7 @@ DEFAULT_FRAME_MS = int(os.getenv("VOICE_FRAME_MS", "20"))
 DEFAULT_INITIAL_SPEECH_TIMEOUT_SECONDS = float(os.getenv("VOICE_INITIAL_SPEECH_TIMEOUT_SECONDS", "20"))
 DEFAULT_IDLE_TIMEOUT_SECONDS = float(os.getenv("VOICE_IDLE_TIMEOUT_SECONDS", "45"))
 DEFAULT_MAX_SESSION_SECONDS = float(os.getenv("VOICE_MAX_SESSION_SECONDS", "300"))
-DEFAULT_PREROLL_SECONDS = float(os.getenv("VOICE_PREROLL_SECONDS", "2.0"))
+DEFAULT_PREROLL_SECONDS = float(os.getenv("VOICE_PREROLL_SECONDS", "3.0"))
 WAKE_WORD_MODEL_DIR = Path(__file__).resolve().parent / "wake_words"
 
 
@@ -499,7 +499,7 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Rolling pre-roll buffer (seconds) injected into the realtime session "
             "after wake. Lets the user keep talking past the wake word without "
-            "waiting for the beep. 0 disables. Default: VOICE_PREROLL_SECONDS or 2.0."
+            "waiting for the beep. 0 disables. Default: VOICE_PREROLL_SECONDS or 3.0."
         ),
     )
     parser.add_argument(
@@ -597,13 +597,11 @@ def main() -> int:
                 if not detected or stop_service.is_set():
                     break
                 print("Wake word detected.")
-                play_wake_chime(
-                    np,
-                    sd,
-                    output_device=output_device,
-                    output_sample_rate=output_sample_rate,
-                    output_channels=output_channels,
-                )
+                # NOTE: the "ready" chime is NOT played here anymore. Firing it at
+                # wake-detection was a false "go" — the mic→model stream isn't live until the
+                # conversation's audio bridge starts (after create_session + the relay/session
+                # connect), ~1s later. The chime now fires there (see run_*_conversation), so
+                # it honestly means "speak now." Pre-roll still covers anything said before it.
                 device_info = {
                     "platform": "home_voice",
                     "device_type": "home_voice",
@@ -880,6 +878,15 @@ def run_realtime_conversation(
                 duration = injected_samples / REALTIME_AUDIO_RATE
                 print(f"  injected pre-roll: {duration:.2f}s")
         audio_bridge.start()
+        # Mic is live now — fire the "ready" chime HERE (not at wake-detection) so it
+        # honestly means "speak now." The bridge is already capturing, so anything said right
+        # after the beep is buffered and sent once the socket opens.
+        play_wake_chime(
+            np, sd,
+            output_device=output_device,
+            output_sample_rate=output_sample_rate,
+            output_channels=output_channels,
+        )
         ws_thread.start()
         started = time.monotonic()
         while not stop_service.is_set() and not session_stop.is_set():
@@ -982,6 +989,15 @@ def run_relay_conversation(
             if injected_samples > 0:
                 print(f"  injected pre-roll: {injected_samples / REALTIME_AUDIO_RATE:.2f}s")
         audio_bridge.start()
+        # Mic is live now — fire the "ready" chime HERE (not at wake-detection) so it
+        # honestly means "speak now." The bridge is already capturing, so anything said right
+        # after the beep is buffered and sent once the socket opens.
+        play_wake_chime(
+            np, sd,
+            output_device=output_device,
+            output_sample_rate=output_sample_rate,
+            output_channels=output_channels,
+        )
         ws_thread.start()
         started = time.monotonic()
         while not stop_service.is_set() and not session_stop.is_set():
