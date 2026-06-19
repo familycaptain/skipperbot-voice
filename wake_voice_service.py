@@ -877,16 +877,17 @@ def run_realtime_conversation(
             if injected_samples > 0:
                 duration = injected_samples / REALTIME_AUDIO_RATE
                 print(f"  injected pre-roll: {duration:.2f}s")
-        audio_bridge.start()
-        # Mic is live now — fire the "ready" chime HERE (not at wake-detection) so it
-        # honestly means "speak now." The bridge is already capturing, so anything said right
-        # after the beep is buffered and sent once the socket opens.
+        # Chime right BEFORE the bridge opens its output stream. play_test_tone needs its own
+        # transient output stream; once the bridge owns the device (in .start()) a second open
+        # fails on ALSA. The bridge starts capturing immediately after, so this is still an
+        # honest "speak now" cue — speech right after the beep is captured and buffered.
         play_wake_chime(
             np, sd,
             output_device=output_device,
             output_sample_rate=output_sample_rate,
             output_channels=output_channels,
         )
+        audio_bridge.start()
         ws_thread.start()
         started = time.monotonic()
         while not stop_service.is_set() and not session_stop.is_set():
@@ -988,16 +989,17 @@ def run_relay_conversation(
             )
             if injected_samples > 0:
                 print(f"  injected pre-roll: {injected_samples / REALTIME_AUDIO_RATE:.2f}s")
-        audio_bridge.start()
-        # Mic is live now — fire the "ready" chime HERE (not at wake-detection) so it
-        # honestly means "speak now." The bridge is already capturing, so anything said right
-        # after the beep is buffered and sent once the socket opens.
+        # Chime right BEFORE the bridge opens its output stream. play_test_tone needs its own
+        # transient output stream; once the bridge owns the device (in .start()) a second open
+        # fails on ALSA. The bridge starts capturing immediately after, so this is still an
+        # honest "speak now" cue — speech right after the beep is captured and buffered.
         play_wake_chime(
             np, sd,
             output_device=output_device,
             output_sample_rate=output_sample_rate,
             output_channels=output_channels,
         )
+        audio_bridge.start()
         ws_thread.start()
         started = time.monotonic()
         while not stop_service.is_set() and not session_stop.is_set():
