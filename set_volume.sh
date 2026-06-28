@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # set_volume.sh — pin + test the speaker output volume for the voice satellite.
 #
-# Why this exists (skipperbot-voice issue #1, "Volume resets to lowest level"):
-# the EMEET conference speakerphone (and some USB speakers) reset their hardware
-# mixer to the LOWEST level on USB re-enumeration — e.g. each time the Docker
-# container restarts. Nothing in the app sets device volume, so the fix is to
-# pin the ALSA mixer to a known level. This script lets you test that by hand on
-# the Pi: if pinning the volume here keeps the speaker audible, we wire the same
-# call into service startup.
+# Why this exists: some USB speakers / speakerphones reset their hardware mixer
+# to the LOWEST level on USB re-enumeration (e.g. a host reboot or replug), so
+# the speaker comes up nearly silent. Nothing in the app sets device volume, so
+# this pins the ALSA mixer to a known level. Use it to test/apply a level by
+# hand; if you set VOICE_OUTPUT_VOLUME, the voice service also re-pins it on
+# startup.
 #
 # Config (read from .env in this dir, or the environment):
 #   VOICE_OUTPUT_VOLUME   target percent 0-100 (default 80)
@@ -29,10 +28,10 @@ cd "$(dirname "$0")"
 
 command -v amixer >/dev/null 2>&1 || { echo "ERROR: amixer not found — install alsa-utils."; exit 1; }
 
-# --- resolve the card: prefer an EMEET/USB playback card, else the first one ---
+# --- resolve the card: prefer a USB playback card, else the first one ---
 detect_card() {
   local hint
-  hint=$(aplay -l 2>/dev/null | grep -iE "emeet|conference|usb" \
+  hint=$(aplay -l 2>/dev/null | grep -iE "usb" \
            | sed -n 's/^card \([0-9]*\):.*/\1/p' | head -1 || true)
   [ -n "$hint" ] && { echo "$hint"; return; }
   aplay -l 2>/dev/null | sed -n 's/^card \([0-9]*\):.*/\1/p' | head -1

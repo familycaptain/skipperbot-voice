@@ -513,7 +513,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _detect_alsa_card() -> str:
-    """Best-effort ALSA playback card index: an EMEET/USB card, else the first."""
+    """Best-effort ALSA playback card index: a USB card, else the first."""
     try:
         out = subprocess.run(
             ["aplay", "-l"], capture_output=True, text=True
@@ -527,7 +527,7 @@ def _detect_alsa_card() -> str:
             continue
         idx = m.group(1)
         first = first or idx
-        if re.search(r"emeet|usb|conference", line, re.IGNORECASE):
+        if re.search(r"usb", line, re.IGNORECASE):
             return idx
     return first
 
@@ -535,14 +535,14 @@ def _detect_alsa_card() -> str:
 def pin_output_volume() -> None:
     """Re-pin the speaker's ALSA output volume on startup.
 
-    The reference EMEET OfficeCore M0 Plus (and some USB speakers) reset their
-    ALSA 'PCM' mixer to the lowest level on USB re-enumeration — e.g. a Pi
-    reboot or replug — so the speaker comes up nearly silent (issue #1). A
-    `docker compose restart` does NOT trigger it, but a fresh boot does. Pinning
-    the mixer to VOICE_OUTPUT_VOLUME on every startup restores a known level.
+    Some USB speakers reset their ALSA mixer to the lowest level on USB
+    re-enumeration (a host reboot or replug), so the speaker can come up nearly
+    silent. Pinning the mixer to VOICE_OUTPUT_VOLUME on every startup restores a
+    known level. (A container restart alone does not re-enumerate the device.)
 
-    Opt-in: does nothing unless VOICE_OUTPUT_VOLUME is set. Never raises — a
-    volume-pin failure must not stop the voice service.
+    Opt-in: does nothing unless VOICE_OUTPUT_VOLUME is set. Card/control default
+    to a USB card and 'PCM'; override with VOICE_OUTPUT_CARD / VOICE_OUTPUT_MIXER.
+    Never raises — a volume-pin failure must not stop the voice service.
     """
     raw = os.getenv("VOICE_OUTPUT_VOLUME", "").strip().rstrip("%")
     if not raw:
@@ -600,8 +600,8 @@ def main() -> int:
         describe_selected_devices(sd, input_device, output_device)
 
         # Restore the speaker volume in case the device reset its ALSA mixer to
-        # the lowest level on USB re-enumeration (issue #1). Opt-in via
-        # VOICE_OUTPUT_VOLUME; no-op when unset, never fatal.
+        # the lowest level on USB re-enumeration. Opt-in via VOICE_OUTPUT_VOLUME;
+        # no-op when unset, never fatal.
         pin_output_volume()
 
         output_sample_rate, output_channels = resolve_audio_settings(
