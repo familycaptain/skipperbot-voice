@@ -68,7 +68,10 @@ docker compose run --rm voice python wake_voice_service.py \
 
 ## Hardware / setup notes (Phase 1)
 
-Early hardware tests for the EMEET Conference Speakerphone M0 Plus.
+Early hardware-bringup tests. They were written against an **EMEET Conference
+Speakerphone M0 Plus** — a good, inexpensive reference device if you're buying
+something — but any USB mic + speaker works. Point the commands at your hardware
+with `--device-name` / `VOICE_DEVICE_NAME` (the default match is `EMEET`).
 
 Install the test dependencies:
 
@@ -100,11 +103,11 @@ The download step requires `onnxruntime`, `scipy`, and `scikit-learn` — these
 are listed in `requirements.txt`, so `pip install -r home_voice/requirements.txt`
 followed by the `--no-deps openwakeword` install above is enough.
 
-On Linux Mint, the EMEET speakerphone often does not expose a usable PortAudio
-*output* device even when its microphone enumerates fine. The output now
+On Linux, some USB speakerphones (the EMEET among them) do not expose a usable
+PortAudio *output* device even when the microphone enumerates fine. The output
 defaults to the system default (`"default"`); set `VOICE_DEVICE_OUTPUT_NAME` or
-pass `--output-name=EMEET` if you want to force the EMEET speaker back on
-(typically on Windows).
+pass `--output-name=<your device>` (e.g. `--output-name=EMEET`) to force a
+specific speaker (typically needed on Windows).
 
 List all audio devices:
 
@@ -112,7 +115,7 @@ List all audio devices:
 python home_voice/basic_audio_test.py --mode list
 ```
 
-Run the basic EMEET test:
+Run the basic audio test:
 
 ```powershell
 python home_voice/basic_audio_test.py
@@ -121,10 +124,11 @@ python home_voice/basic_audio_test.py
 That default test will:
 
 - list audio devices
-- find input and output devices containing `EMEET`
-- play a short tone through the EMEET speaker
-- record a short sample from the EMEET microphone
-- play that sample back through the EMEET speaker
+- find input and output devices matching the configured device name (default
+  `EMEET`; set `--device-name` / `VOICE_DEVICE_NAME` for yours)
+- play a short tone through the speaker
+- record a short sample from the microphone
+- play that sample back through the speaker
 - save the sample to `home_voice/last_recording.wav`
 
 Optional guarded loopback test:
@@ -152,22 +156,22 @@ python home_voice/one_shot_response_test.py
 
 That records one utterance, transcribes it, sends the text through Skipper's
 normal chat/tool brain with home voice context, synthesizes Skipper's response,
-and plays the response through the EMEET speaker.
+and plays the response through the speaker.
 
 This chained STT -> text -> TTS test is only a Phase 1 stepping stone. The final
 home voice path should use the same two-way OpenAI Realtime streaming pattern as
 the Android app, with the backend providing compact voice instructions and
 switchable app/tool guides.
 
-Run the realtime EMEET prototype:
+Run the realtime prototype:
 
 ```powershell
 python home_voice/realtime_voice_test.py
 ```
 
-This opens a realtime session, streams EMEET mic PCM audio to OpenAI, plays
-assistant audio deltas through the EMEET speaker, and routes voice tool calls
-through Skipper's shared voice runtime. Press `Ctrl+C` to stop.
+This opens a realtime session, streams mic PCM audio to OpenAI, plays assistant
+audio deltas through the speaker, and routes voice tool calls through Skipper's
+shared voice runtime. Press `Ctrl+C` to stop.
 
 Run the always-on wake-word service with OpenWakeWord:
 
@@ -180,9 +184,9 @@ stable `hey-skipper.onnx` / `hey_skipper.onnx` file or the newest timestamped
 `Hey_Skipper*.onnx` export from `home_voice\wake_words`.
 
 OpenWakeWord avoids Picovoice per-device activation limits and is the preferred
-wake backend for the EMEET / future Raspberry Pi satellite. For quick testing
-before training "Hey Skipper", download OpenWakeWord's pretrained models,
-initialize the EMEET wake listener, and try a bundled label such as
+wake backend for the voice satellite (e.g. an EMEET speakerphone or a Raspberry
+Pi). For quick testing before training "Hey Skipper", download OpenWakeWord's
+pretrained models, initialize the wake listener, and try a bundled label such as
 `hey_jarvis`:
 
 ```powershell

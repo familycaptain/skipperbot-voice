@@ -60,7 +60,7 @@ DEFAULT_PLAYBACK_BARGE_IN_GRACE_MS = int(os.getenv("VOICE_PLAYBACK_BARGE_IN_GRAC
 
 
 class RealtimeAudioBridge:
-    """Streams EMEET mic frames to Realtime and speaker frames back out."""
+    """Streams mic frames to Realtime and speaker frames back out."""
 
     def __init__(
         self,
@@ -405,7 +405,7 @@ class RealtimeHomeVoiceClient:
         print(f"Realtime WebSocket closed ({status_code}): {message}")
 
     def _send_mic_loop(self) -> None:
-        print("Streaming EMEET microphone. Press Ctrl+C to stop.")
+        print("Streaming microphone. Press Ctrl+C to stop.")
         while not self.stop_event.is_set():
             chunk = self.audio_bridge.get_mic_chunk()
             if not chunk:
@@ -541,7 +541,7 @@ def build_speaker_gate(np: Any, *, sample_rate: int, frame_ms: int, args: argpar
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Realtime EMEET voice prototype using the shared Android voice config."
+        description="Realtime voice prototype using the shared Android voice config."
     )
     parser.add_argument("--user-id", default=os.getenv("VOICE_USER_ID", "user1"))
     parser.add_argument("--device-id", default=os.getenv("VOICE_DEVICE_ID", "windows-server-local-emeet"))

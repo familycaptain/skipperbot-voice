@@ -388,7 +388,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Always-on local home voice service: local wake word -> "
-            "Realtime EMEET conversation -> back to wake listening."
+            "Realtime conversation -> back to wake listening."
         )
     )
     parser.add_argument("--user-id", default=os.getenv("VOICE_USER_ID", "user1"))
@@ -507,7 +507,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--self-test-wake",
         action="store_true",
-        help="Initialize the selected wake backend and EMEET mic, then exit.",
+        help="Initialize the selected wake backend and mic, then exit.",
     )
     return parser
 

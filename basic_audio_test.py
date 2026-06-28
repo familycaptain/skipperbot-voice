@@ -239,7 +239,7 @@ def record_audio(
     seconds: float,
 ) -> Any:
     print(f"\nRecording {seconds:.1f}s from microphone...")
-    print("Speak near the EMEET now.")
+    print("Speak near the microphone now.")
     frames = max(1, int(sample_rate * seconds))
     recording = sd.rec(
         frames,
@@ -378,7 +378,7 @@ def run_loopback(
     seconds: float,
 ) -> None:
     print("\nLoopback test requested.")
-    print("Lower the EMEET volume now. This can create feedback.")
+    print("Lower the speaker volume now. This can create feedback.")
     for remaining in range(3, 0, -1):
         print(f"Starting loopback in {remaining}...")
         time.sleep(1)
@@ -432,7 +432,7 @@ def run_loopback(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Basic Phase 1 audio tests for the EMEET speakerphone."
+        description="Basic Phase 1 audio tests for a USB speakerphone (default device name: EMEET)."
     )
     parser.add_argument(
         "--mode",
@@ -443,7 +443,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--device-name",
         default=DEFAULT_DEVICE_NAME,
-        help="Fallback partial name for both input and output devices. Default: EMEET.",
+        help="Partial name match for input and output devices (default: EMEET — set to your device's name).",
     )
     parser.add_argument(
         "--input-name",
