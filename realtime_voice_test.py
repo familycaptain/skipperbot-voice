@@ -544,7 +544,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Realtime voice prototype using the shared Android voice config."
     )
     parser.add_argument("--user-id", default=os.getenv("VOICE_USER_ID", "user1"))
-    parser.add_argument("--device-id", default=os.getenv("VOICE_DEVICE_ID", "windows-server-local-emeet"))
+    parser.add_argument("--device-id", default=os.getenv("VOICE_DEVICE_ID", "skipper-voice-emeet"))
     parser.add_argument("--room", default=os.getenv("VOICE_ROOM", "office"))
     parser.add_argument("--friendly-name", default=os.getenv("VOICE_FRIENDLY_NAME", "Office Speaker"))
     parser.add_argument("--device-name", default=DEFAULT_DEVICE_NAME)
