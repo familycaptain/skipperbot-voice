@@ -4,7 +4,9 @@ import argparse
 import collections
 import os
 import queue
+import re
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -510,6 +512,63 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _detect_alsa_card() -> str:
+    """Best-effort ALSA playback card index: an EMEET/USB card, else the first."""
+    try:
+        out = subprocess.run(
+            ["aplay", "-l"], capture_output=True, text=True
+        ).stdout
+    except FileNotFoundError:
+        return ""
+    first = ""
+    for line in out.splitlines():
+        m = re.match(r"card (\d+):", line)
+        if not m:
+            continue
+        idx = m.group(1)
+        first = first or idx
+        if re.search(r"emeet|usb|conference", line, re.IGNORECASE):
+            return idx
+    return first
+
+
+def pin_output_volume() -> None:
+    """Re-pin the speaker's ALSA output volume on startup.
+
+    The reference EMEET OfficeCore M0 Plus (and some USB speakers) reset their
+    ALSA 'PCM' mixer to the lowest level on USB re-enumeration — e.g. a Pi
+    reboot or replug — so the speaker comes up nearly silent (issue #1). A
+    `docker compose restart` does NOT trigger it, but a fresh boot does. Pinning
+    the mixer to VOICE_OUTPUT_VOLUME on every startup restores a known level.
+
+    Opt-in: does nothing unless VOICE_OUTPUT_VOLUME is set. Never raises — a
+    volume-pin failure must not stop the voice service.
+    """
+    raw = os.getenv("VOICE_OUTPUT_VOLUME", "").strip().rstrip("%")
+    if not raw:
+        return
+    try:
+        vol = max(0, min(100, int(raw)))
+    except ValueError:
+        print(f"[volume] ignoring invalid VOICE_OUTPUT_VOLUME={raw!r}")
+        return
+    card = os.getenv("VOICE_OUTPUT_CARD", "").strip() or _detect_alsa_card()
+    mixer = os.getenv("VOICE_OUTPUT_MIXER", "").strip() or "PCM"
+    if not card:
+        print("[volume] no ALSA playback card found; skipping volume pin")
+        return
+    try:
+        subprocess.run(
+            ["amixer", "-c", str(card), "sset", mixer, f"{vol}%", "unmute"],
+            check=True, capture_output=True, text=True,
+        )
+        print(f"[volume] pinned card {card} '{mixer}' to {vol}%")
+    except FileNotFoundError:
+        print("[volume] amixer not found (install alsa-utils); skipping volume pin")
+    except subprocess.CalledProcessError as exc:
+        print(f"[volume] could not set volume: {(exc.stderr or '').strip() or exc}")
+
+
 def main() -> int:
     args = build_parser().parse_args()
     access_key = os.getenv("PICOVOICE_API_KEY", "").strip()
@@ -539,6 +598,11 @@ def main() -> int:
         input_device = find_device(sd, input_name, "input")
         output_device = find_device(sd, output_name, "output")
         describe_selected_devices(sd, input_device, output_device)
+
+        # Restore the speaker volume in case the device reset its ALSA mixer to
+        # the lowest level on USB re-enumeration (issue #1). Opt-in via
+        # VOICE_OUTPUT_VOLUME; no-op when unset, never fatal.
+        pin_output_volume()
 
         output_sample_rate, output_channels = resolve_audio_settings(
             sd,
