@@ -172,6 +172,8 @@ class RelayClient:
                 args_str = str(args)
             self._emit_response_line(f"  -> tool: {name} {args_str}")
             self.mark_activity()
+        elif etype == "host_info":
+            print(f"Host: {event.get('text', '')}")
         elif etype == "session_ended":
             print("Session ended by host.")
             self.stop_event.set()
