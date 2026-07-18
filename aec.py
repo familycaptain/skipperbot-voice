@@ -158,8 +158,10 @@ class _SpeexAEC(_Base):
         _install_imp_shim()
         from speexdsp import EchoCanceller  # type: ignore
         frame_size = int(rate * _FRAME_MS / 1000)          # samples per 10ms frame
-        # Filter tail must cover the acoustic + buffer delay; default ~200ms.
-        tail_ms = int(os.getenv("VOICE_AEC_TAIL_MS", "200"))
+        # Filter tail must cover the acoustic + buffer delay. 400ms is what cleared the
+        # residual echo on the reference eMeet setup at full volume (the delay is
+        # dominated by the playback/resample buffering, ~100-150ms); 200ms was too short.
+        tail_ms = int(os.getenv("VOICE_AEC_TAIL_MS", "400"))
         filter_length = max(frame_size * 2, int(rate * tail_ms / 1000))
         self._ec = EchoCanceller.create(frame_size, filter_length, rate)
         self._ref_frames: list[bytes] = []
@@ -187,6 +189,10 @@ def create(rate: int) -> _Base | None:
     for cls in order:
         try:
             inst = cls(rate)
+            # print() (not just logger.info) so it shows in the console alongside the
+            # other satellite status lines, confirming AEC is actually active.
+            print(f"AEC: {inst.name} echo cancellation ACTIVE @ {rate}Hz "
+                  f"(tail {os.getenv('VOICE_AEC_TAIL_MS', '400')}ms)")
             logger.info("AEC: using %s backend @ %dHz", inst.name, rate)
             return inst
         except Exception as exc:  # noqa: BLE001 — try the next backend, else no-op
