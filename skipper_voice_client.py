@@ -31,6 +31,7 @@ import json
 import logging
 import os
 import threading
+import time
 import urllib.parse
 import urllib.request
 
@@ -182,6 +183,113 @@ class Sideband:
 
     def send_transcript(self, role: str, text: str) -> None:
         self._send({"type": "transcript", "role": role, "text": text})
+
+    def close(self) -> None:
+        self._closed = True
+        if self._ws is not None:
+            try:
+                self._ws.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+
+# ---------------------------------------------------------------------------
+# Device link — persistent control channel for PROACTIVE voice (announcements)
+# ---------------------------------------------------------------------------
+
+def _device_ws_url(api_base: str, device_id: str, *, user_id: str = "", room: str = "") -> str:
+    base = api_base.replace("https://", "wss://").replace("http://", "ws://")
+    url = f"{base}/ws/voice/device/{urllib.parse.quote(device_id)}"
+    query = urllib.parse.urlencode(
+        {k: v for k, v in (("user_id", user_id), ("room", room)) if v})
+    return f"{url}?{query}" if query else url
+
+
+class DeviceLink:
+    """Persistent WebSocket to /ws/voice/device/{device_id} for proactive voice.
+
+    Unlike Sideband (session-scoped), the satellite holds THIS open from boot and
+    auto-reconnects, so the host can push announcements while the device is idle.
+    Text frames are JSON control ({"type": "announce" | "announce_end" | "pong"});
+    binary frames are announcement PCM16 mono @24kHz. The callbacks run on the
+    socket thread — keep them quick (play audio, don't block for long).
+    """
+
+    def __init__(self, device_id: str, *, api_base: str = DEFAULT_API_BASE,
+                 user_id: str = "", room: str = "",
+                 on_announce=None, on_pcm=None, on_announce_end=None,
+                 reconnect_seconds: float = 5.0) -> None:
+        self.device_id = device_id
+        self.api_base = api_base
+        self.user_id = user_id
+        self.room = room
+        self.on_announce = on_announce or (lambda evt: None)
+        self.on_pcm = on_pcm or (lambda data: None)
+        self.on_announce_end = on_announce_end or (lambda: None)
+        self.reconnect_seconds = reconnect_seconds
+        self._ws = None
+        self._thread = None
+        self._closed = False
+
+    def start(self) -> None:
+        try:
+            import websocket  # noqa: F401 — websocket-client
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            raise RuntimeError(
+                "Missing dependency: websocket-client (pip install websocket-client)"
+            ) from exc
+        self._thread = threading.Thread(
+            target=self._run_forever, name="skipper-device-link", daemon=True)
+        self._thread.start()
+
+    def _run_forever(self) -> None:
+        import websocket
+        url = _device_ws_url(self.api_base, self.device_id,
+                             user_id=self.user_id, room=self.room)
+        while not self._closed:
+            try:
+                self._ws = websocket.WebSocketApp(
+                    url, header=ws_auth_headers(),
+                    on_open=self._on_open, on_message=self._on_message,
+                    on_error=self._on_error, on_close=self._on_close)
+                # protocol-level pings keep the link alive through idle/NAT
+                self._ws.run_forever(ping_interval=20, ping_timeout=10)
+            except Exception as exc:  # noqa: BLE001 — never let the thread die
+                logger.error("device-link run_forever error: %s", exc)
+            if self._closed:
+                break
+            time.sleep(self.reconnect_seconds)
+
+    def _on_open(self, _ws) -> None:
+        logger.info("device-link connected (device=%s)", self.device_id)
+
+    def _on_message(self, _ws, message) -> None:
+        if isinstance(message, (bytes, bytearray)):
+            try:
+                self.on_pcm(bytes(message))
+            except Exception as exc:  # noqa: BLE001
+                logger.error("device-link on_pcm failed: %s", exc)
+            return
+        try:
+            evt = json.loads(message)
+        except (ValueError, TypeError):
+            return
+        etype = evt.get("type")
+        try:
+            if etype == "announce":
+                self.on_announce(evt)
+            elif etype == "announce_end":
+                self.on_announce_end()
+            # "pong" and anything else: ignore
+        except Exception as exc:  # noqa: BLE001 — a bad event must not kill the socket
+            logger.error("device-link handler for %s failed: %s", etype, exc)
+
+    def _on_error(self, _ws, error) -> None:
+        logger.debug("device-link WS error: %s", error)
+
+    def _on_close(self, _ws, *_args) -> None:
+        if not self._closed:
+            logger.info("device-link closed (device=%s) — reconnecting", self.device_id)
 
     def close(self) -> None:
         self._closed = True

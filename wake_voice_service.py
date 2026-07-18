@@ -22,6 +22,7 @@ from basic_audio_test import (  # noqa: E402
     DEFAULT_DEVICE_NAME,
     DEFAULT_INPUT_NAME,
     DEFAULT_OUTPUT_NAME,
+    convert_audio,
     describe_selected_devices,
     find_device,
     list_audio_devices,
@@ -584,6 +585,7 @@ def main() -> int:
     np, sd = load_audio_deps()
     initialize_async_loop()
     stop_service = threading.Event()
+    device_link = None            # proactive-voice link (started once, below)
 
     def request_stop(signum=None, frame=None) -> None:
         stop_service.set()
@@ -642,6 +644,55 @@ def main() -> int:
             )
             return 0
 
+        # --- Proactive voice: persistent device link for one-way announcements ---
+        # The satellite holds a standing WS to the platform so the host can push
+        # spoken announcements while we're idle (a timer firing, etc.). We only play
+        # them when NOT mid-conversation: during a session the audio bridge owns the
+        # single ALSA output device, so a second open would fail.
+        in_session = threading.Event()
+        _ann = {"buf": bytearray(), "active": False}
+
+        def _on_announce(evt: dict) -> None:
+            if in_session.is_set():
+                print("Announcement received during a conversation — skipping.")
+                return
+            _ann["buf"] = bytearray()
+            _ann["active"] = True
+            print(f"Announcement: {str(evt.get('text', ''))[:100]}")
+            play_announce_chime(
+                np, sd, output_device=output_device,
+                output_sample_rate=output_sample_rate, output_channels=output_channels)
+
+        def _on_pcm(data: bytes) -> None:
+            if _ann["active"]:
+                _ann["buf"].extend(data)
+
+        def _on_announce_end() -> None:
+            if not _ann["active"]:
+                return
+            _ann["active"] = False
+            pcm = bytes(_ann["buf"])
+            if not pcm or in_session.is_set():
+                return
+            try:
+                arr = np.frombuffer(pcm, dtype=np.int16)
+                out = convert_audio(
+                    np, arr, input_sample_rate=REALTIME_AUDIO_RATE,
+                    output_sample_rate=output_sample_rate, output_channels=output_channels)
+                sd.play(out, samplerate=output_sample_rate, device=output_device)
+                sd.wait()
+            except Exception as exc:  # noqa: BLE001
+                print(f"Announcement playback failed: {exc}")
+
+        try:
+            device_link = skc.DeviceLink(
+                args.device_id, user_id=args.user_id, room=args.room,
+                on_announce=_on_announce, on_pcm=_on_pcm, on_announce_end=_on_announce_end)
+            device_link.start()
+            print(f"Proactive device link starting (device={args.device_id}).")
+        except Exception as exc:  # noqa: BLE001 — proactive voice is best-effort
+            print(f"Proactive device link unavailable: {exc}")
+
         # Tools run on the platform; nothing to initialize locally. Each wake
         # creates a server-side session whose config carries the tool list.
         while not stop_service.is_set():
@@ -692,22 +743,30 @@ def main() -> int:
                 run_relay_conversation if args.mode == "relay"
                 else run_realtime_conversation
             )
-            conversation(
-                np,
-                sd,
-                args=args,
-                input_device=input_device,
-                output_device=output_device,
-                stop_service=stop_service,
-                session_config=session_config,
-                preroll_pcm=preroll_pcm,
-                preroll_sample_rate=preroll_sample_rate,
-            )
+            # Mark the device busy so a proactive announcement doesn't try to grab
+            # the ALSA output the conversation's audio bridge now owns.
+            in_session.set()
+            try:
+                conversation(
+                    np,
+                    sd,
+                    args=args,
+                    input_device=input_device,
+                    output_device=output_device,
+                    stop_service=stop_service,
+                    session_config=session_config,
+                    preroll_pcm=preroll_pcm,
+                    preroll_sample_rate=preroll_sample_rate,
+                )
+            finally:
+                in_session.clear()
             if not stop_service.is_set():
                 print(f"Cooling down for {args.cooldown_seconds:.1f}s...")
                 time.sleep(args.cooldown_seconds)
 
     finally:
+        if device_link is not None:
+            device_link.close()
         shutdown_async_loop()
 
     print("Home voice wake service stopped.")
@@ -808,6 +867,34 @@ def play_wake_chime(
         )
     except Exception as exc:
         logger.debug("HOME_VOICE_WAKE: chime failed: %s", exc)
+
+
+def play_announce_chime(
+    np: Any,
+    sd: Any,
+    *,
+    output_device: int | None,
+    output_sample_rate: int,
+    output_channels: int,
+) -> None:
+    """Soft two-note RISING earcon before a proactive announcement — Skipper's
+    'I'm about to say something' cue, distinct from the wake chime (single 880) and
+    the end chime (falling)."""
+    try:
+        play_chime_sequence(
+            np,
+            sd,
+            output_device=output_device,
+            sample_rate=output_sample_rate,
+            channels=output_channels,
+            tones=[
+                (587.33, 0.12, 0.11),   # D5
+                (880.00, 0.16, 0.11),   # A5
+            ],
+            gap_seconds=0.04,
+        )
+    except Exception as exc:
+        logger.debug("HOME_VOICE_WAKE: announce chime failed: %s", exc)
 
 
 def play_end_chime(
