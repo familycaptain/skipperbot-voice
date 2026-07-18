@@ -33,7 +33,9 @@ _FRAME_MS = 10  # webrtc requires 10ms frames; speexdsp uses the same for parity
 
 
 def enabled() -> bool:
-    return os.getenv("VOICE_AEC", "off").strip().lower() in ("1", "true", "on", "yes")
+    # On by default now that it's proven; harmless where unneeded (graceful no-op if
+    # no backend is installed). Set VOICE_AEC=off to disable.
+    return os.getenv("VOICE_AEC", "on").strip().lower() in ("1", "true", "on", "yes")
 
 
 class _Base:
@@ -195,7 +197,10 @@ def create(rate: int) -> _Base | None:
                   f"(tail {os.getenv('VOICE_AEC_TAIL_MS', '400')}ms)")
             logger.info("AEC: using %s backend @ %dHz", inst.name, rate)
             return inst
-        except Exception as exc:  # noqa: BLE001 — try the next backend, else no-op
-            logger.warning("AEC: %s backend unavailable: %s", cls.name, exc)
-    logger.warning("AEC: no backend available — running WITHOUT echo cancellation")
+        except Exception as exc:  # noqa: BLE001 — EXPECTED during fallback; not an error.
+            # Debug-level so a normal "webrtc not installed, using speexdsp" fallback
+            # doesn't look like a failure in the console. Only a total miss is surfaced.
+            logger.debug("AEC: %s backend not available (%s); trying next", cls.name, exc)
+    print("AEC: no echo-cancellation backend installed — running WITHOUT AEC "
+          "(this is fine unless you need full-volume full-duplex; see aec.py)")
     return None
