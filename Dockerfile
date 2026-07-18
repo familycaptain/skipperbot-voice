@@ -43,6 +43,18 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
+# 1b) OPTIONAL: in-app acoustic echo cancellation, enabled at runtime with
+#     VOICE_AEC=on. Lets the eMeet run at FULL volume without feedback while keeping
+#     full-duplex barge-in (aec.py). BEST-EFFORT: every line is non-fatal, so a
+#     backend that won't build on this arch is simply skipped and the AEC gracefully
+#     no-ops at runtime (voice unchanged). webrtc = best quality; speexdsp = reliable
+#     fallback. If a line errors, send the build output and we'll adjust the package.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential libspeexdsp-dev libwebrtc-audio-processing-dev \
+        ; rm -rf /var/lib/apt/lists/* ; true
+RUN pip install speexdsp || echo "AEC: speexdsp binding not installed (speex echo cancellation off)"
+RUN pip install webrtc-audio-processing || echo "AEC: webrtc binding not installed (falls back to speexdsp)"
+
 # 2) openWakeWord WITHOUT its dependencies (see notes above).
 RUN pip install --no-deps "openwakeword>=0.6.0"
 

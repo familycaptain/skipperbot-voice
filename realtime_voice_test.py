@@ -99,6 +99,17 @@ class RealtimeAudioBridge:
         self._suppress_mic_during_playback = DEFAULT_SUPPRESS_MIC_DURING_PLAYBACK
         self._input_stream = None
         self._output_stream = None
+        # In-app acoustic echo cancellation (opt-in via VOICE_AEC). Cancels Skipper's
+        # own playback out of the mic so the speaker can run at full volume WITHOUT
+        # feedback, while keeping full-duplex barge-in. Runs entirely on the Pi with
+        # the local playback as reference — network latency is irrelevant. Any failure
+        # falls back to None (voice runs unchanged).
+        try:
+            import aec as _aec
+            self._aec = _aec.create(input_sample_rate)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("AEC init failed (%s) — continuing without echo cancellation", exc)
+            self._aec = None
 
     def start(self) -> None:
         self._input_stream = self.sd.InputStream(
@@ -202,9 +213,19 @@ class RealtimeAudioBridge:
             logger.debug("HOME_VOICE: input status: %s", status)
         if self._suppress_mic_during_playback and self.is_playback_barge_in_grace_active():
             return
+        mic = indata
+        if self._aec is not None:
+            # Cancel Skipper's echo out of the raw mic (mono int16 @ input rate) BEFORE
+            # resampling. Returns whole 10ms frames; a partial frame is buffered, so a
+            # callback may yield nothing yet.
+            mono = indata[:, 0] if getattr(indata, "ndim", 1) > 1 else indata.reshape(-1)
+            cleaned = self._aec.process(self.np.ascontiguousarray(mono).tobytes())
+            if not cleaned:
+                return
+            mic = self.np.frombuffer(cleaned, dtype=self.np.int16).reshape(-1, 1)
         realtime_audio = convert_audio(
             self.np,
-            indata,
+            mic,
             input_sample_rate=self.input_sample_rate,
             output_sample_rate=REALTIME_AUDIO_RATE,
             output_channels=REALTIME_CHANNELS,
@@ -249,6 +270,25 @@ class RealtimeAudioBridge:
             frames,
             self.output_channels,
         )
+
+        # Feed the AEC the far-end reference: the EXACT samples we just sent to the
+        # speaker, downsampled to the mic rate + mono. add_reference only buffers
+        # (the APM work happens on the input thread), so this stays cheap.
+        if self._aec is not None:
+            try:
+                ref = self.np.frombuffer(chunk, dtype=self.np.int16).reshape(
+                    frames, self.output_channels)
+                ref_mono = ref[:, 0] if self.output_channels > 1 else ref.reshape(-1)
+                ref_at_mic_rate = convert_audio(
+                    self.np,
+                    ref_mono.reshape(-1, 1),
+                    input_sample_rate=self.output_sample_rate,
+                    output_sample_rate=self.input_sample_rate,
+                    output_channels=1,
+                )
+                self._aec.add_reference(ref_at_mic_rate.tobytes())
+            except Exception as exc:  # noqa: BLE001 — never break playback on an AEC hiccup
+                logger.debug("HOME_VOICE: AEC add_reference failed: %s", exc)
 
 
 class RealtimeHomeVoiceClient:
