@@ -40,6 +40,14 @@ class RelayClient:
         # loop can treat both the same way.
         self.first_user_transcript_at: float | None = None
         self._last_activity = time.monotonic()
+        # Console ordering: the brain answers immediately (fail-open) while the user's
+        # transcript is produced by a separate model a beat later, so "Skipper:" can
+        # arrive before "You:". We hold response lines (Skipper: / tool:) until the
+        # matching "You:" prints, so the log reads in the order things actually happened.
+        self._pending_user = False
+        self._buffered_lines: list[str] = []
+        self._buf_lock = threading.Lock()
+        self._buf_timer: "threading.Timer | None" = None
 
     # --- timeout-loop interface (matches the direct client) ---
     def mark_activity(self) -> None:
@@ -50,6 +58,33 @@ class RelayClient:
 
     def waiting_for_first_user_transcript_seconds(self) -> float:
         return time.monotonic() - self._last_activity
+
+    # --- console ordering: hold response lines until the You: line prints ---
+    def _flush_buffered(self) -> None:
+        with self._buf_lock:
+            lines = self._buffered_lines
+            self._buffered_lines = []
+            self._pending_user = False
+            if self._buf_timer is not None:
+                self._buf_timer.cancel()
+                self._buf_timer = None
+        for line in lines:
+            print(line)
+
+    def _emit_response_line(self, line: str) -> None:
+        """Print a response line (Skipper's speech / a tool call). If a user turn just
+        ended but its `You:` hasn't printed yet, hold it so it prints AFTER `You:`; a
+        timer flushes it if the transcript never arrives (e.g. a dropped/empty turn)."""
+        with self._buf_lock:
+            if self._pending_user:
+                self._buffered_lines.append(line)
+                if self._buf_timer is not None:
+                    self._buf_timer.cancel()
+                self._buf_timer = threading.Timer(1.5, self._flush_buffered)
+                self._buf_timer.daemon = True
+                self._buf_timer.start()
+                return
+        print(line)
 
     # --- websocket lifecycle ---
     def _url(self) -> str:
@@ -105,9 +140,19 @@ class RelayClient:
             if role == "user":
                 if self.first_user_transcript_at is None:
                     self.first_user_transcript_at = time.monotonic()
+                # Print You: first, then release any response lines held for this turn.
+                with self._buf_lock:
+                    held = self._buffered_lines
+                    self._buffered_lines = []
+                    self._pending_user = False
+                    if self._buf_timer is not None:
+                        self._buf_timer.cancel()
+                        self._buf_timer = None
                 print(f"You: {text}")
+                for line in held:
+                    print(line)
             else:
-                print(f"Skipper: {text}")
+                self._emit_response_line(f"Skipper: {text}")
             self.mark_activity()
         elif etype == "status":
             status = event.get("status")
@@ -115,6 +160,8 @@ class RelayClient:
                 print("Listening...")
             elif status == "speech_stopped":
                 print("Thinking...")
+                with self._buf_lock:
+                    self._pending_user = True   # a You: is expected for the turn just ended
             self.mark_activity()
         elif etype == "tool_call":
             name = event.get("name", "?")
@@ -123,7 +170,7 @@ class RelayClient:
                 args_str = json.dumps(args, default=str) if args else "{}"
             except Exception:
                 args_str = str(args)
-            print(f"  -> tool: {name} {args_str}")
+            self._emit_response_line(f"  -> tool: {name} {args_str}")
             self.mark_activity()
         elif etype == "session_ended":
             print("Session ended by host.")
