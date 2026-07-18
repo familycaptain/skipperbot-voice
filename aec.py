@@ -119,11 +119,43 @@ class _WebrtcAEC(_Base):
         return self._ap.process_stream(frame)
 
 
+def _install_imp_shim() -> None:
+    """Python 3.12 removed the `imp` module, but speexdsp's SWIG loader still does
+    `import imp`. Provide a minimal shim (find_module/load_module over importlib) so
+    the compiled extension loads. No-op if `imp` already exists."""
+    import sys
+    if "imp" in sys.modules:
+        return
+    import types
+    import importlib.util
+    import importlib.machinery
+    shim = types.ModuleType("imp")
+
+    def find_module(name, path=None):
+        spec = importlib.machinery.PathFinder().find_spec(name, path)
+        if spec is None or not spec.origin:
+            raise ImportError(name)
+        return (open(spec.origin, "rb"), spec.origin, ("", "rb", 3))
+
+    def load_module(name, file, pathname, desc):
+        spec = importlib.util.spec_from_file_location(name, pathname)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        sys.modules[name] = mod
+        return mod
+
+    shim.find_module = find_module
+    shim.load_module = load_module
+    shim.C_EXTENSION = 3
+    sys.modules["imp"] = shim
+
+
 class _SpeexAEC(_Base):
     name = "speexdsp"
 
     def __init__(self, rate: int):
         super().__init__(rate)
+        _install_imp_shim()
         from speexdsp import EchoCanceller  # type: ignore
         frame_size = int(rate * _FRAME_MS / 1000)          # samples per 10ms frame
         # Filter tail must cover the acoustic + buffer delay; default ~200ms.

@@ -49,11 +49,15 @@ RUN pip install -r requirements.txt
 #     backend that won't build on this arch is simply skipped and the AEC gracefully
 #     no-ops at runtime (voice unchanged). webrtc = best quality; speexdsp = reliable
 #     fallback. If a line errors, send the build output and we'll adjust the package.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential libspeexdsp-dev libwebrtc-audio-processing-dev \
-        ; rm -rf /var/lib/apt/lists/* ; true
-RUN pip install speexdsp || echo "AEC: speexdsp binding not installed (speex echo cancellation off)"
-RUN pip install webrtc-audio-processing || echo "AEC: webrtc binding not installed (falls back to speexdsp)"
+# speexdsp builds from source via SWIG (verified on py3.12: build-essential +
+# libspeexdsp-dev + swig). aec.py injects an `imp` shim so the SWIG loader works on
+# 3.12. Non-fatal: if it doesn't build, the AEC gracefully no-ops at runtime.
+# (webrtc APM has no working py3.12 pip binding today; aec.py still prefers it if
+# one is ever installed, else falls back to speexdsp.)
+RUN apt-get update ; \
+    apt-get install -y --no-install-recommends build-essential libspeexdsp-dev swig ; \
+    rm -rf /var/lib/apt/lists/* ; true
+RUN pip install speexdsp || echo "AEC: speexdsp not installed — echo cancellation off"
 
 # 2) openWakeWord WITHOUT its dependencies (see notes above).
 RUN pip install --no-deps "openwakeword>=0.6.0"
