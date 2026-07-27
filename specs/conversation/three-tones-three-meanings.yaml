@@ -1,0 +1,17 @@
+kind: specification
+id: voice.conversation.three-tones-three-meanings
+title: Three tones, three meanings, never reused
+state: live
+autonomy: gated
+behavior: >
+  The device speaks in three distinct earcons and never reuses one. A single note means "I am
+  listening, speak now"; a rising pair means "I am about to say something you did not ask for";
+  a falling pair means "I have stopped listening". Someone across the room can tell what the
+  device is doing without looking at it.
+implements:
+- wake_voice_service.py::play_wake_chime
+- wake_voice_service.py::play_announce_chime
+- wake_voice_service.py::play_end_chime
+tests: []
+links: {}
+notes: ''

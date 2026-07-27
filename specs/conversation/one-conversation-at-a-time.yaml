@@ -1,0 +1,15 @@
+kind: specification
+id: voice.conversation.one-conversation-at-a-time
+title: One conversation at a time, with a pause between
+state: live
+autonomy: gated
+behavior: >
+  While a conversation is running the device is not watching for its wake word, so saying it
+  again is simply more speech in that conversation rather than the start of a second one. After
+  a conversation ends there is a short pause before wake detection resumes, so the closing tone
+  cannot set it off again.
+implements:
+- wake_voice_service.py::main
+tests: []
+links: {}
+notes: ''

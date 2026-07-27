@@ -1,0 +1,17 @@
+kind: specification
+id: voice.conversation.no-conversation-runs-all-day
+title: No single conversation can run all day
+state: live
+autonomy: gated
+behavior: >
+  A conversation is stopped once it reaches a fixed maximum length however lively it is, so
+  nothing — a stuck exchange, a television, a room that will not go quiet — can hold the
+  microphone open indefinitely. It is the last line of defence: the quiet timeouts normally end
+  a conversation long before it.
+implements:
+- wake_voice_service.py::run_relay_conversation
+tests: []
+links: {}
+notes: >
+  The earlier timeouts are each resettable by sound in the room, so only a wall-clock limit
+  actually bounds how long a microphone can stay open.

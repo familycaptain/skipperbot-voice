@@ -1,0 +1,15 @@
+kind: specification
+id: voice.waking.a-choice-of-detectors
+title: The wake-word detector can be swapped without changing the experience
+state: live
+autonomy: gated
+behavior: >
+  The device listens with a local detector that needs no account and no per-device activation,
+  and can be pointed at a commercial one instead for comparison. Which one is in use changes
+  nothing a person in the room experiences: the same wake word, the same tones, the same
+  conversation afterwards.
+implements:
+- wake_voice_service.py::create_wake_listener
+tests: []
+links: {}
+notes: ''

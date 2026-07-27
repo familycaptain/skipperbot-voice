@@ -1,0 +1,16 @@
+kind: specification
+id: voice.announcements.announcements-are-optional
+title: Unprompted speech is never a prerequisite for the assistant working
+state: live
+autonomy: gated
+behavior: >
+  If the standing connection cannot be established the device says so and carries on: the wake
+  word, conversations and everything else behave exactly as before, and the only thing lost is
+  Skipper's ability to speak unprompted. A household whose speaker cannot hold that connection
+  still has a voice assistant.
+implements:
+- wake_voice_service.py::main
+- skipper_voice_client.py::start
+tests: []
+links: {}
+notes: ''

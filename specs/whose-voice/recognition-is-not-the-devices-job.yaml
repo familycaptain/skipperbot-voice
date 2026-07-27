@@ -1,0 +1,15 @@
+kind: specification
+id: voice.whose-voice.recognition-is-not-the-devices-job
+title: The device makes no judgement about who is speaking
+state: live
+autonomy: gated
+behavior: >
+  In normal service the device forms no opinion on who is talking: it forwards what it hears and
+  any recognition happens on the platform, where enrolled voices live. A device with no
+  recognition installed therefore behaves identically to one that has it — it forwards audio
+  either way — and nothing about recognition is a condition of the speaker working.
+implements:
+- wake_voice_service.py::run_relay_conversation
+tests: []
+links: {}
+notes: ''

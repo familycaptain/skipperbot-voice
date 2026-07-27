@@ -1,0 +1,17 @@
+kind: specification
+id: voice.whose-voice.the-lock-holds-speech-back-until-a-pause
+title: The lock costs a pause, and never costs the last thing said
+state: live
+autonomy: gated
+behavior: >
+  While the lock is deciding, speech is gathered on the device and only sent once the person
+  pauses or the stretch grows long, so a locked conversation answers a little later than an
+  unlocked one. Speech still being gathered when the conversation ends is sent rather than
+  thrown away.
+implements:
+- speaker_isolation.py::process
+- speaker_isolation.py::flush
+- realtime_voice_test.py::stop
+tests: []
+links: {}
+notes: ''

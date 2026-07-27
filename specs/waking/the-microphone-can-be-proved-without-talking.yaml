@@ -1,0 +1,15 @@
+kind: specification
+id: voice.waking.the-microphone-can-be-proved-without-talking
+title: You can prove it hears without holding a conversation
+state: live
+autonomy: gated
+behavior: >
+  The device can be asked to bring up its microphone and wake-word detection, report the audio
+  format and confidence level in force, and then exit. Someone installing a speaker can
+  therefore prove the hardware works and the wake word loads without reaching the platform and
+  without saying anything to it.
+implements:
+- wake_voice_service.py::self_test_wake_listener
+tests: []
+links: {}
+notes: ''

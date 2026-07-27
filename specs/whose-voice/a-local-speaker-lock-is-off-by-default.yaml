@@ -1,0 +1,17 @@
+kind: specification
+id: voice.whose-voice.a-local-speaker-lock-is-off-by-default
+title: The device can hold a conversation to one voice, and does not unless asked
+state: live
+autonomy: gated
+behavior: >
+  The device can optionally hold a conversation to whoever spoke first in it, so a loud
+  conversation elsewhere in the room is not answered as though it were part of this one. It is
+  off unless asked for. Asked for as a preference it uses the recognition library where
+  installed and otherwise carries on forwarding everything; asked for as a requirement it
+  refuses to start without it. It is experimental, and how strict it is can be tuned.
+implements:
+- speaker_isolation.py::SpeakerIsolationGate
+- realtime_voice_test.py::build_speaker_gate
+tests: []
+links: {}
+notes: ''

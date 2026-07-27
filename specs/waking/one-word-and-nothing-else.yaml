@@ -1,0 +1,16 @@
+kind: specification
+id: voice.waking.one-word-and-nothing-else
+title: Nothing but the wake word starts a conversation
+state: live
+autonomy: gated
+behavior: >
+  While the device is idle its microphone is open and everything it hears is examined for one
+  wake word and nothing else. No other word, no conversation in the room, no television and no
+  noise causes the device to do anything, and none of it is sent anywhere or written down. Only
+  a match starts a conversation.
+implements:
+- wake_voice_service.py::OpenWakeWordWakeListener
+- wake_voice_service.py::main
+tests: []
+links: {}
+notes: ''

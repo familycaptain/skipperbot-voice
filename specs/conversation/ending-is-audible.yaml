@@ -1,0 +1,16 @@
+kind: specification
+id: voice.conversation.ending-is-audible
+title: The end of listening is always audible
+state: live
+autonomy: gated
+behavior: >
+  Every conversation that ends while the device stays in service ends with a distinct falling
+  two-note tone, so a person always knows the microphone has stopped — whether they said
+  goodbye, walked away, or the conversation was cut off by a problem. It is not played when the
+  whole service is shutting down, because the device is not returning to listening.
+implements:
+- wake_voice_service.py::play_end_chime
+- wake_voice_service.py::run_relay_conversation
+tests: []
+links: {}
+notes: ''

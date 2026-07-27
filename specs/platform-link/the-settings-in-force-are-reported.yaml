@@ -1,0 +1,14 @@
+kind: specification
+id: voice.platform-link.the-settings-in-force-are-reported
+title: The device reports which platform settings the conversation is actually running on
+state: live
+autonomy: gated
+behavior: >
+  At the start of a conversation the device shows which speech and transcription settings the
+  platform is really using, so a change made on the platform can be confirmed from the device
+  rather than assumed. Nothing about the conversation depends on it being shown.
+implements:
+- host_relay_client.py::_on_message
+tests: []
+links: {}
+notes: ''

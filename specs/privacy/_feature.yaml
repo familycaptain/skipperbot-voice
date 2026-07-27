@@ -1,0 +1,8 @@
+kind: feature
+id: voice.privacy
+title: What the microphone does with what it hears
+state: live
+links: {}
+notes: >
+  A microphone in a family home. What is captured, where it goes, what is kept, and what the
+  device is allowed to claim about who is speaking.

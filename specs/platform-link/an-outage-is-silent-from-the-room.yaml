@@ -1,0 +1,18 @@
+kind: specification
+id: voice.platform-link.an-outage-is-silent-from-the-room
+title: From the room, a platform outage sounds exactly like not being heard
+state: live
+autonomy: gated
+behavior: >
+  Because the "speak now" tone is only played once a conversation is actually live, a wake that
+  cannot reach the platform makes no sound at all. A person in the room gets the same nothing
+  whether they were not heard, the wake word missed them, or the platform is down — so they say
+  it again rather than knowing to go and look.
+implements:
+- wake_voice_service.py::main
+- wake_voice_service.py::play_wake_chime
+tests: []
+links: {}
+notes: >
+  Recorded as it is, not as it should be: there is no distinct earcon for 'I heard you and
+  cannot reach Skipper', which is the one case a person could act on.

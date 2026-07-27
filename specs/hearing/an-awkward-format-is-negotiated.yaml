@@ -1,0 +1,16 @@
+kind: specification
+id: voice.hearing.an-awkward-format-is-negotiated
+title: Hardware that will not take the preferred format is negotiated with, not rejected
+state: live
+autonomy: gated
+behavior: >
+  The device asks its hardware for the format a conversation wants and, when the hardware
+  refuses, works down a list of common alternatives, reports which one it settled for, and
+  converts between that and what the conversation needs. Only when nothing at all works does it
+  stop, and then it lists everything it tried.
+implements:
+- basic_audio_test.py::resolve_audio_settings
+- basic_audio_test.py::convert_audio
+tests: []
+links: {}
+notes: ''

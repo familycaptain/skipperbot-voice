@@ -1,0 +1,16 @@
+kind: specification
+id: voice.announcements.the-speaker-answers-to-a-name
+title: A speaker answers to a name and a room, so a house can have several
+state: live
+autonomy: gated
+behavior: >
+  The device registers with the platform under a stable name of its own and the room it stands
+  in, so a household with more than one speaker can be told to speak in a particular room. The
+  name is chosen by whoever installs it rather than derived from the hardware, and it is the
+  same after a restart, so an announcement aimed at a room keeps landing there.
+implements:
+- skipper_voice_client.py::DeviceLink
+- wake_voice_service.py::build_parser
+tests: []
+links: {}
+notes: ''

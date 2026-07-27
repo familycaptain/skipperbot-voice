@@ -1,0 +1,16 @@
+kind: specification
+id: voice.platform-link.a-wake-the-platform-cannot-answer-returns-to-listening
+title: A wake the platform cannot answer returns to listening
+state: live
+autonomy: gated
+behavior: >
+  When the platform cannot be reached, or refuses to start a conversation, the device says why
+  in its own output, waits a moment and goes back to listening for the wake word. It does not
+  retry in a tight loop, does not stream the microphone anywhere, and does not leave a person
+  waiting on a conversation that will never start.
+implements:
+- wake_voice_service.py::main
+- skipper_voice_client.py::create_session
+tests: []
+links: {}
+notes: ''

@@ -1,0 +1,18 @@
+kind: specification
+id: voice.privacy.what-was-said-is-visible-on-the-device
+title: What was said is visible on the device, and in nobody's console
+state: live
+autonomy: gated
+behavior: >
+  Both sides of a voice exchange appear in the device's own output as they happen — what was
+  heard, what Skipper answered, and which tools it used with their parameters — so the pipeline
+  can be watched live while it misbehaves. That output is the device's diagnostic. A voice turn
+  still forms no part of any household member's web-console record.
+implements:
+- host_relay_client.py::_on_message
+tests: []
+links: {}
+notes: >
+  Operator's rule: the shared speaker has no reliable attribution, so voice is excluded from the
+  per-person console record. The device's own output is a diagnostic and must not become a
+  durable record of household conversation.

@@ -1,0 +1,16 @@
+kind: specification
+id: voice.privacy.audio-goes-to-the-household-platform
+title: Room audio has exactly one destination, and the household owns it
+state: live
+autonomy: gated
+behavior: >
+  During a conversation the microphone is streamed to the household's own Skipper platform and
+  nowhere else; the platform, not the speaker box, is what talks to any outside speech service.
+  The device holds no outside credentials for that path, so there is one destination for room
+  audio and it is under the household's control.
+implements:
+- host_relay_client.py::RelayClient
+- wake_voice_service.py::run_relay_conversation
+tests: []
+links: {}
+notes: ''

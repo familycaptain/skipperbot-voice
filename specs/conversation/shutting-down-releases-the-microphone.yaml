@@ -1,0 +1,16 @@
+kind: specification
+id: voice.conversation.shutting-down-releases-the-microphone
+title: Shutting the service down releases the microphone and the session
+state: live
+autonomy: gated
+behavior: >
+  Asked to stop — by a person or by the machine shutting the service down — the device closes
+  its microphone, tells the platform the conversation is finished and exits, without playing the
+  closing tone. It never leaves a session open on the platform behind it, and a platform that
+  cannot be told does not hold up the shutdown.
+implements:
+- wake_voice_service.py::main
+- skipper_voice_client.py::end_session
+tests: []
+links: {}
+notes: ''

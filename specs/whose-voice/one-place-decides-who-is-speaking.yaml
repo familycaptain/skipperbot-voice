@@ -1,0 +1,15 @@
+kind: specification
+id: voice.whose-voice.one-place-decides-who-is-speaking
+title: Only one side ever decides who is speaking
+state: live
+autonomy: gated
+behavior: >
+  In the ordinary arrangement, where the platform holds the conversation, the device does not
+  apply its own speaker lock even if one is configured: deciding who is speaking belongs to the
+  side that can compare against enrolled voices, and doing it in both places would silently drop
+  turns the platform meant to answer.
+implements:
+- wake_voice_service.py::run_relay_conversation
+tests: []
+links: {}
+notes: ''

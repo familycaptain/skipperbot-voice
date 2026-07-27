@@ -1,0 +1,16 @@
+kind: capability
+id: voice
+title: Voice satellite
+app: voice
+scope: >
+  The household voice device. A standalone program on a speaker box — a USB speakerphone or a
+  Raspberry Pi satellite — that waits for a wake word, captures and cleans room audio, streams a
+  conversation to the household's Skipper platform, plays back what Skipper says, and can be spoken
+  through while idle. It holds no brain, no tools, no database and no speech-provider key of its
+  own: everything needing them happens on the platform. NOT what Skipper says or decides, and NOT
+  part of anyone's web-console record — a shared speaker has no reliable attribution, so voice is
+  deliberately excluded from it.
+state: live
+autonomy: gated
+links: {}
+notes: ''

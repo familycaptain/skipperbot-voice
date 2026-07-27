@@ -1,0 +1,15 @@
+kind: specification
+id: voice.privacy.no-recordings-are-kept
+title: The device keeps no recordings
+state: live
+autonomy: gated
+behavior: >
+  Normal service writes no audio to disk: no recording of a conversation, no cached utterance,
+  nothing that survives a restart. The only audio file the device can produce is the deliberate
+  output of the hand-run microphone test, saved where the person who ran it can see it and
+  delete it.
+implements:
+- basic_audio_test.py::save_wav
+tests: []
+links: {}
+notes: ''

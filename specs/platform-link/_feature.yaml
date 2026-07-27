@@ -1,0 +1,8 @@
+kind: feature
+id: voice.platform-link
+title: Depending on the platform
+state: live
+links: {}
+notes: >
+  The device is a satellite: without the platform it can hear its name and do nothing else. What
+  it does when the platform is slow, unreachable, or disappears mid-sentence.

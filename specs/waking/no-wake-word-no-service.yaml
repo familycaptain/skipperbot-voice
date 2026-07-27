@@ -1,0 +1,17 @@
+kind: specification
+id: voice.waking.no-wake-word-no-service
+title: A missing wake word stops start-up rather than listening for nothing
+state: live
+autonomy: gated
+behavior: >
+  If the wake-word model the device was told to use is not on the device, the service refuses to
+  start and names the file it looked for, instead of coming up unable to ever hear its own name.
+  Choosing the commercial detector without the key it needs fails the same way, and a key that
+  has run out of device activations says exactly that rather than reporting a bare start-up
+  error.
+implements:
+- wake_voice_service.py::main
+- wake_voice_service.py::PorcupineWakeListener
+tests: []
+links: {}
+notes: ''

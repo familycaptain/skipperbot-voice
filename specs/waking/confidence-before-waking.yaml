@@ -1,0 +1,16 @@
+kind: specification
+id: voice.waking.confidence-before-waking
+title: A wake takes a confident match, not a maybe
+state: live
+autonomy: gated
+behavior: >
+  A candidate has to clear a confidence level before the device treats itself as addressed, and
+  that level can be raised so a busy room stops setting it off or lowered so a quiet voice from
+  across the room is heard. The trade is stated in one place and applies to whichever detector
+  is in use.
+implements:
+- wake_voice_service.py::wait_for_detection
+- wake_voice_service.py::build_parser
+tests: []
+links: {}
+notes: ''

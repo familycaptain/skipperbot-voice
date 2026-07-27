@@ -1,0 +1,8 @@
+kind: feature
+id: voice.waking
+title: Waking the speaker
+state: live
+links: {}
+notes: >
+  Everything up to the moment the device decides it has been addressed. NOT what happens
+  afterwards (voice.conversation).

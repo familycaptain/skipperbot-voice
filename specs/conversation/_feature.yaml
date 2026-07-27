@@ -1,0 +1,8 @@
+kind: feature
+id: voice.conversation
+title: A conversation, start to finish
+state: live
+links: {}
+notes: >
+  The life of one exchange at the speaker: how it opens, what tells a person it is live, and
+  every way it ends. NOT what Skipper says (the platform).

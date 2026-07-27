@@ -1,0 +1,15 @@
+kind: specification
+id: voice.hearing.missing-hardware-stops-start-up
+title: Hardware that is not there stops start-up instead of listening elsewhere
+state: live
+autonomy: gated
+behavior: >
+  If nothing matching the configured name is present the device does not start: it says which
+  name it looked for and lists the input and output hardware it can actually see. It never
+  quietly falls back to some other microphone, because an assistant listening on the wrong
+  device in the wrong room is worse than one that is plainly down.
+implements:
+- basic_audio_test.py::find_device
+tests: []
+links: {}
+notes: ''

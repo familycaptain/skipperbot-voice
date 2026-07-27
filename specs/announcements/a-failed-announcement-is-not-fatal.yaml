@@ -1,0 +1,14 @@
+kind: specification
+id: voice.announcements.a-failed-announcement-is-not-fatal
+title: An announcement that cannot be played leaves the assistant working
+state: live
+autonomy: gated
+behavior: >
+  If an announcement cannot be played — the speaker is busy, the audio is unusable, playback
+  fails — the device reports it and stays in service, listening for the wake word as before. A
+  failed announcement never costs the household the ability to talk to Skipper.
+implements:
+- wake_voice_service.py::main
+tests: []
+links: {}
+notes: ''

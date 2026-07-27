@@ -1,0 +1,16 @@
+kind: specification
+id: voice.whose-voice.the-first-voice-owns-the-conversation
+title: With the lock on, the first voice after the wake word owns the conversation
+state: live
+autonomy: gated
+behavior: >
+  With the lock on, the first stretch of speech long enough to judge becomes that conversation's
+  speaker, and later stretches are forwarded only if they sound like the same person. A stretch
+  too short to judge, or one no judgement can be made about, is dropped rather than guessed at.
+  The lock lasts one conversation: the next one starts open to whoever speaks first.
+implements:
+- speaker_isolation.py::process
+- speaker_isolation.py::_finish_segment
+tests: []
+links: {}
+notes: ''

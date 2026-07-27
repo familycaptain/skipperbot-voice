@@ -1,0 +1,17 @@
+kind: specification
+id: voice.hearing.full-volume-without-hearing-itself
+title: The speaker can run at full volume without Skipper hearing itself
+state: live
+autonomy: gated
+behavior: >
+  The device cancels its own playback out of its own microphone as it plays, so the speaker can
+  run at full volume without Skipper's voice coming back as though somebody in the room had said
+  it — and without muting the microphone, so a person can still cut in. The cancellation works
+  from the audio the device itself is playing, so how far away the platform is makes no
+  difference to it.
+implements:
+- aec.py::create
+- realtime_voice_test.py::RealtimeAudioBridge
+tests: []
+links: {}
+notes: ''

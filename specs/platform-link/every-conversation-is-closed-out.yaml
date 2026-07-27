@@ -1,0 +1,16 @@
+kind: specification
+id: voice.platform-link.every-conversation-is-closed-out
+title: Every conversation is closed out on the platform
+state: live
+autonomy: gated
+behavior: >
+  However a conversation ends — goodbye, timeout, dropped link, the service being stopped — the
+  device tells the platform that session is finished, and a platform that cannot be told does
+  not stop the device returning to listening. A device that walks away never leaves a session
+  open behind it.
+implements:
+- skipper_voice_client.py::end_session
+- wake_voice_service.py::run_relay_conversation
+tests: []
+links: {}
+notes: ''

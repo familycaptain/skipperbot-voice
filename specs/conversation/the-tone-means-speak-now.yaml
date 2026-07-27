@@ -1,0 +1,18 @@
+kind: specification
+id: voice.conversation.the-tone-means-speak-now
+title: The tone means the microphone is live, not that the wake word was heard
+state: live
+autonomy: gated
+behavior: >
+  The tone that invites somebody to speak is played only once their microphone is actually
+  reaching Skipper — about a second after the wake word, once the conversation has been set up —
+  so a person who waits for the tone and then speaks is heard in full. The tone is never a false
+  "go" that swallows their first words.
+implements:
+- wake_voice_service.py::run_relay_conversation
+- wake_voice_service.py::play_wake_chime
+tests: []
+links: {}
+notes: >
+  The tone used to fire the moment the wake word was recognised, which read as 'go' while the
+  audio path was still being built, so anything said in that second was lost.

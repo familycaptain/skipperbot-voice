@@ -1,0 +1,21 @@
+kind: specification
+id: voice.privacy.the-device-never-decides-who-is-speaking
+title: The device says where it is, never who is there
+state: live
+autonomy: gated
+behavior: >
+  What the device tells the platform about itself is a place: a stable name for the speaker, the
+  room it stands in, a friendly label. It must not assert which household member is present, and
+  nothing it sends may hand a conversation one person's identity by default — anyone in the
+  house can walk up to a shared speaker. Who is speaking, if it is resolved at all, is resolved
+  on the platform from the audio; an unattributed conversation is answered as an unattributed
+  one rather than as somebody's.
+implements:
+- wake_voice_service.py::main
+- skipper_voice_client.py::create_session
+tests: []
+links: {}
+notes: >
+  Operator's rule, from platform.speaking.voice-is-nobodys-personal-surface: a device-asserted
+  identity would put the wrong name on what was said and would open one person's data to whoever
+  walked up.

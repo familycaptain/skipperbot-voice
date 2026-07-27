@@ -1,0 +1,8 @@
+kind: feature
+id: voice.whose-voice
+title: Whose voice the device is hearing
+state: live
+links: {}
+notes: >
+  Telling one speaker in a room from another. Enrolled identities live on the platform; this is
+  only what the device itself does or refuses to do.

@@ -1,0 +1,17 @@
+kind: specification
+id: voice.privacy.the-legacy-path-goes-straight-out
+title: The legacy path sends audio straight out, which is why it is not the default
+state: live
+autonomy: gated
+behavior: >
+  A device switched to the legacy direct mode streams its microphone to the outside speech
+  service itself, using a short-lived credential the platform issues for that one conversation,
+  and the platform then sees only transcripts and tool calls rather than the audio. To the
+  person in the room it is the same conversation; to the question "where does room audio go" it
+  is a different answer, so it is not what a device does unless it is asked to.
+implements:
+- realtime_voice_test.py::run
+- wake_voice_service.py::run_realtime_conversation
+tests: []
+links: {}
+notes: ''

@@ -1,0 +1,15 @@
+kind: specification
+id: voice.announcements.an-announcement-announces-itself
+title: Unprompted speech is preceded by its own tone
+state: live
+autonomy: gated
+behavior: >
+  Before saying something nobody asked for, the device plays a rising two-note tone distinct
+  from every other tone it makes, so speech out of a box in the corner of a room is recognisable
+  as Skipper rather than startling. The tone comes first, then the words.
+implements:
+- wake_voice_service.py::play_announce_chime
+- wake_voice_service.py::main
+tests: []
+links: {}
+notes: ''

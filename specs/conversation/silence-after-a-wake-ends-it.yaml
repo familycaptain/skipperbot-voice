@@ -1,0 +1,14 @@
+kind: specification
+id: voice.conversation.silence-after-a-wake-ends-it
+title: A wake nobody follows up on closes itself
+state: live
+autonomy: gated
+behavior: >
+  When nobody speaks after a wake, the device stops listening and returns to waiting for the
+  wake word rather than holding the microphone open on an empty room. How long it waits can be
+  changed, and can be switched off for a device that should stay open until told otherwise.
+implements:
+- wake_voice_service.py::run_relay_conversation
+tests: []
+links: {}
+notes: ''

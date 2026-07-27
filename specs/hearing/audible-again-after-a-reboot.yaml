@@ -1,0 +1,15 @@
+kind: specification
+id: voice.hearing.audible-again-after-a-reboot
+title: The speaker comes back audible after a reboot
+state: live
+autonomy: gated
+behavior: >
+  Some USB speakers come back from a reboot or a replug with their volume at the bottom, leaving
+  a device that looks broken and is only silent. Where a level has been chosen for the device,
+  the service restores it every time it starts, so the speaker comes back at that level. Nothing
+  is touched on a device where no level was asked for.
+implements:
+- wake_voice_service.py::pin_output_volume
+tests: []
+links: {}
+notes: ''

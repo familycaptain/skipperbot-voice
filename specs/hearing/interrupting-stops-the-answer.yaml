@@ -1,0 +1,15 @@
+kind: specification
+id: voice.hearing.interrupting-stops-the-answer
+title: Speaking over Skipper interrupts it
+state: live
+autonomy: gated
+behavior: >
+  Speaking while Skipper is talking interrupts it: the answer stops instead of talking over the
+  person. Skipper's own first moment of speech does not count as an interruption, so a reply is
+  never cut off by the sound of itself beginning.
+implements:
+- realtime_voice_test.py::is_playback_barge_in_grace_active
+- realtime_voice_test.py::RealtimeHomeVoiceClient
+tests: []
+links: {}
+notes: ''

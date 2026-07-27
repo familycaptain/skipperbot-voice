@@ -1,0 +1,17 @@
+kind: specification
+id: voice.platform-link.even-the-legacy-path-needs-the-platform
+title: Even the legacy path cannot act without the platform
+state: live
+autonomy: gated
+behavior: >
+  Even in the legacy direct mode the device cannot do anything on its own: each tool the
+  assistant calls is sent to the platform over a second link and its result handed back, and a
+  mid- conversation switch of what Skipper is working on arrives the same way. If that link is
+  not there the tool call is dropped and the assistant answers without it — which is another
+  reason the mode is not the default.
+implements:
+- skipper_voice_client.py::Sideband
+- realtime_voice_test.py::_handle_tool_call
+tests: []
+links: {}
+notes: ''

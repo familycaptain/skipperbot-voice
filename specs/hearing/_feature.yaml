@@ -1,0 +1,8 @@
+kind: feature
+id: voice.hearing
+title: Hearing and being heard
+state: live
+links: {}
+notes: >
+  The audio hardware: which microphone and speaker, at what format and volume, and keeping the
+  two from feeding back into each other.

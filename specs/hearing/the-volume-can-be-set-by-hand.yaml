@@ -1,0 +1,14 @@
+kind: specification
+id: voice.hearing.the-volume-can-be-set-by-hand
+title: The volume can be set, read back and heard by hand
+state: live
+autonomy: gated
+behavior: >
+  The same volume can be set, read back and tested by hand on the device, including listing the
+  hardware and controls available when the automatic choice picks the wrong one. It plays a tone
+  afterwards, so the result is heard rather than assumed.
+implements:
+- set_volume.sh
+tests: []
+links: {}
+notes: ''

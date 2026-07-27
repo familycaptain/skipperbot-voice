@@ -1,0 +1,15 @@
+kind: specification
+id: voice.hearing.muting-the-microphone-is-a-last-resort
+title: Muting the microphone while Skipper talks is a remedy, not the normal way to run
+state: live
+autonomy: gated
+behavior: >
+  Hardware that cannot avoid hearing itself any other way can be told to ignore its microphone
+  while Skipper is speaking. That is off unless asked for, and asking for it costs the ability
+  to interrupt — so it is offered as a cure for feedback on poor hardware and never as how the
+  device ordinarily behaves.
+implements:
+- realtime_voice_test.py::_input_callback
+tests: []
+links: {}
+notes: ''

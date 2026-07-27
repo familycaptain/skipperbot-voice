@@ -1,0 +1,8 @@
+kind: feature
+id: voice.announcements
+title: When Skipper speaks first
+state: live
+links: {}
+notes: >
+  Speech pushed to an idle speaker — a timer firing, a reminder — rather than answering
+  somebody. NOT the decision to say it (the platform), only how the speaker behaves.

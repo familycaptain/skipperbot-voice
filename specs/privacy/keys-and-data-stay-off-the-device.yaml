@@ -1,0 +1,16 @@
+kind: specification
+id: voice.privacy.keys-and-data-stay-off-the-device
+title: A stolen speaker box yields a microphone and an address, not the household's data
+state: live
+autonomy: gated
+behavior: >
+  The device needs the platform's address and one credential for it, and nothing else: no
+  database connection, no outside speech-service key of its own, no copy of the household's
+  records. That is what makes it safe to leave a speaker in a room, or to run one in a different
+  building from the platform.
+implements:
+- skipper_voice_client.py
+- requirements.txt
+tests: []
+links: {}
+notes: ''

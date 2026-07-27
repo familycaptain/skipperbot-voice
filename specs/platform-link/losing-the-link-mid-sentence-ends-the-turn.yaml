@@ -1,0 +1,16 @@
+kind: specification
+id: voice.platform-link.losing-the-link-mid-sentence-ends-the-turn
+title: Losing the link mid-sentence ends the conversation rather than talking to nothing
+state: live
+autonomy: gated
+behavior: >
+  If the link to the platform drops while somebody is mid-sentence, the device stops streaming
+  instead of pushing audio into a dead connection, plays its closing tone and returns to waiting
+  for the wake word. What was already said is not resent when the link comes back, and the drop
+  needs no restart and nobody's intervention.
+implements:
+- host_relay_client.py::_on_close
+- host_relay_client.py::_send_mic_loop
+tests: []
+links: {}
+notes: ''

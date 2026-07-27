@@ -1,0 +1,16 @@
+kind: specification
+id: voice.conversation.talking-through-the-wake-word
+title: You can keep talking straight through the wake word
+state: live
+autonomy: gated
+behavior: >
+  Somebody who says the wake word and carries straight on without waiting for the tone is still
+  heard in full: the few seconds around the wake word are kept and handed over ahead of the live
+  microphone, so "Hey Skipper, what's the weather" arrives as one sentence. Switched off, the
+  conversation simply starts from the tone instead.
+implements:
+- wake_voice_service.py::snapshot_preroll_pcm
+- realtime_voice_test.py::inject_preroll_pcm
+tests: []
+links: {}
+notes: ''

@@ -1,0 +1,16 @@
+kind: specification
+id: voice.conversation.told-to-stop-it-stops
+title: When Skipper says the conversation is over, the microphone stops at once
+state: live
+autonomy: gated
+behavior: >
+  When the platform decides a conversation is finished — a goodbye, its own inactivity limit, a
+  decision taken there — the device stops streaming the microphone immediately, plays the
+  closing tone and returns to waiting for the wake word. It does not ask for confirmation and
+  does not keep listening in case something more is said.
+implements:
+- host_relay_client.py::_on_message
+- wake_voice_service.py::run_relay_conversation
+tests: []
+links: {}
+notes: ''

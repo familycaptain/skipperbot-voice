@@ -1,0 +1,16 @@
+kind: specification
+id: voice.hearing.no-canceller-still-talks
+title: A device with no echo canceller still holds conversations
+state: live
+autonomy: gated
+behavior: >
+  Where no echo canceller can be installed the service still starts and works, and says plainly
+  in its output that it is running without one. The only cost is that the speaker may have to be
+  turned down to stop Skipper hearing itself. Nothing about the feature can stop a working setup
+  from starting.
+implements:
+- aec.py::create
+- realtime_voice_test.py::RealtimeAudioBridge
+tests: []
+links: {}
+notes: ''

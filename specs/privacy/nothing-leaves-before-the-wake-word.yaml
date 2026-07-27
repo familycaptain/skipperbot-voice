@@ -1,0 +1,16 @@
+kind: specification
+id: voice.privacy.nothing-leaves-before-the-wake-word
+title: Nothing leaves the house before the wake word
+state: live
+autonomy: gated
+behavior: >
+  While the device is idle nothing it hears is transmitted and nothing is written to disk: at
+  most the last few seconds are held in memory to cover somebody talking through the wake word,
+  and those seconds are continuously overwritten by the next few. A device that never hears its
+  wake word transmits no audio at all, however long it has been running.
+implements:
+- wake_voice_service.py::_input_callback
+- wake_voice_service.py::snapshot_preroll_pcm
+tests: []
+links: {}
+notes: ''

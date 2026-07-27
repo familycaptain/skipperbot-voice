@@ -1,0 +1,16 @@
+kind: specification
+id: voice.announcements.announcements-are-one-way
+title: Being spoken to unprompted never opens the microphone
+state: live
+autonomy: gated
+behavior: >
+  An announcement is Skipper saying something, and that is all of it: the device does not open
+  its microphone afterwards to catch a reply, so speech arriving unprompted can never start a
+  recording. Answering means saying the wake word, exactly as at any other time.
+implements:
+- wake_voice_service.py::main
+tests: []
+links: {}
+notes: >
+  A speaker that opened its own microphone because the house decided to talk to somebody would
+  be recording without anybody having addressed it.

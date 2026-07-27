@@ -1,0 +1,15 @@
+kind: specification
+id: voice.conversation.a-quiet-conversation-ends-itself
+title: A conversation that goes quiet ends without being told to
+state: live
+autonomy: gated
+behavior: >
+  Once a real exchange has happened, a stretch of quiet ends the conversation and the device
+  goes back to waiting for its name, so walking away mid-conversation does not leave the
+  microphone streaming. The quiet needed is longer than the wait for a first word, because a
+  pause partway through a conversation is normal and being cut off mid-thought is not.
+implements:
+- wake_voice_service.py::run_relay_conversation
+tests: []
+links: {}
+notes: ''

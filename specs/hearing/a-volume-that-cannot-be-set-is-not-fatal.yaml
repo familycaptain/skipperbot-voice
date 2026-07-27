@@ -1,0 +1,14 @@
+kind: specification
+id: voice.hearing.a-volume-that-cannot-be-set-is-not-fatal
+title: Being unable to set the volume never costs the household its assistant
+state: live
+autonomy: gated
+behavior: >
+  When the volume cannot be restored — no mixer tool on the device, no playback hardware found,
+  a level that is not a number — the device says which of those happened and carries on into
+  normal service. It never refuses to listen because it could not set a volume.
+implements:
+- wake_voice_service.py::pin_output_volume
+tests: []
+links: {}
+notes: ''

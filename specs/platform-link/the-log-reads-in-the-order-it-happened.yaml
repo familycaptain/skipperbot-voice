@@ -1,0 +1,15 @@
+kind: specification
+id: voice.platform-link.the-log-reads-in-the-order-it-happened
+title: What was said reads back in the order it happened
+state: live
+autonomy: gated
+behavior: >
+  Skipper's answer is usually ready before the words it answered have been transcribed, so the
+  device holds its answer back until the person's line has been shown — and shows it anyway
+  shortly after if that line never arrives. What somebody reads afterwards matches the order the
+  exchange actually happened in, rather than the order the pieces arrived.
+implements:
+- host_relay_client.py::_emit_response_line
+tests: []
+links: {}
+notes: ''

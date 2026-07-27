@@ -1,0 +1,16 @@
+kind: specification
+id: voice.hearing.hardware-is-chosen-by-name
+title: The microphone and speaker are chosen by name, not by slot
+state: live
+autonomy: gated
+behavior: >
+  Which microphone and speaker the device uses is chosen by a fragment of the hardware's own
+  name rather than a slot number, so a device that comes back in a different position after a
+  reboot is still found. Input and output can be named separately for hardware that presents
+  them differently, and naming nothing uses whatever the machine treats as default.
+implements:
+- basic_audio_test.py::find_device
+- wake_voice_service.py::main
+tests: []
+links: {}
+notes: ''

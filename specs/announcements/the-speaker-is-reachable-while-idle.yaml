@@ -1,0 +1,15 @@
+kind: specification
+id: voice.announcements.the-speaker-is-reachable-while-idle
+title: The speaker stays reachable while nothing is happening
+state: live
+autonomy: gated
+behavior: >
+  From the moment it starts, the device holds a standing connection to the platform so Skipper
+  can speak through it without anybody having said the wake word. If that connection drops it is
+  re-established on its own within seconds, for as long as the service runs, so a speaker is not
+  left silently unreachable by one network blip.
+implements:
+- skipper_voice_client.py::DeviceLink
+tests: []
+links: {}
+notes: ''

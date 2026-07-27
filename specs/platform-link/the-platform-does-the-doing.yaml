@@ -1,0 +1,15 @@
+kind: specification
+id: voice.platform-link.the-platform-does-the-doing
+title: Anything Skipper does during a voice conversation happens on the platform
+state: live
+autonomy: gated
+behavior: >
+  When Skipper acts during a voice conversation — sets a timer, looks something up, changes a
+  setting — the work happens on the platform, never on the speaker box. The device's part is to
+  show what was called and with which parameters in its own output, so somebody watching can see
+  what the assistant did on their behalf.
+implements:
+- host_relay_client.py::_on_message
+tests: []
+links: {}
+notes: ''

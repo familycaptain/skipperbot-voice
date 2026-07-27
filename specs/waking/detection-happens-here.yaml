@@ -1,0 +1,16 @@
+kind: specification
+id: voice.waking.detection-happens-here
+title: Deciding whether the wake word was said needs no network
+state: live
+autonomy: gated
+behavior: >
+  Whether the wake word was spoken is decided entirely on the speaker box, so an idle device
+  whose network is down still recognises being addressed, and no audio has to leave the house
+  for that decision to be made. A freshly installed device also does not fetch anything to be
+  able to listen: it can start with no internet at all.
+implements:
+- wake_voice_service.py::OpenWakeWordWakeListener
+- Dockerfile
+tests: []
+links: {}
+notes: ''

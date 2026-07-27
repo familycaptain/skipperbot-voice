@@ -1,0 +1,15 @@
+kind: specification
+id: voice.waking.the-newest-trained-word-wins
+title: Told nothing, the device uses the wake word it has
+state: live
+autonomy: gated
+behavior: >
+  With no wake word named, the device uses the stable "Hey Skipper" model if one is present and
+  otherwise the most recently trained export sitting beside it, so retraining the wake word and
+  dropping the new file in is enough to switch to it. It never picks up a model from anywhere
+  else.
+implements:
+- wake_voice_service.py::default_openwakeword_model_paths
+tests: []
+links: {}
+notes: ''
